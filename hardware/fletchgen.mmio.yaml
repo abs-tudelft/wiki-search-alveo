@@ -1,134 +1,214 @@
 metadata:
   name: mmio
-  doc: Fletchgen generated MMIO configuration.
-  
-entity:
-  bus-flatten:  yes
-  bus-prefix:   mmio_
-  clock-name:   bcd_clk
-  reset-name:   bcd_reset
+  brief: MMIO configuration for word match demo. Modified from what Fletchgen generated.
+  doc: |
+    The word match demo kernel takes a record batch consisting of
+    Wikipedia articles (or any other kind of titled text for each row), and
+    searches them for a runtime-configurable word. The article text itself
+    should be compressed with Snappy raw format to save space and bandwidth,
+    and to make the demo more interesting. The kernel returns a record batch
+    consisting of the title string and match count for the first N articles
+    that match the word at least M times, returns the total number of articles
+    that matched at least M times, and returns the total number of word
+    matches.
 
 features:
   bus-width:    32
   optimize:     yes
 
 interface:
-  flatten:      yes
+  flatten:      record
 
-fields: 
+fields:
   - address: 0
     register-name: control
     bitrange: 0
     name: start
+    brief: |
+      Starts the kernel with the parameters specified in the rest of the
+      register file.
     behavior: strobe
-
-  - address: 0
-    register-name: control
-    bitrange: 1
-    name: stop
-    behavior: strobe
-
-  - address: 0
-    register-name: control
-    bitrange: 2
-    name: reset
-    behavior: strobe
+    group: ctrl
 
   - address: 4
     register-name: status
     bitrange: 0
     name: idle
+    brief: |
+      Asserted high when the kernel is not busy.
     behavior: status
+    group: ctrl
 
   - address: 4
     register-name: status
     bitrange: 1
     name: busy
+    brief: |
+      Asserted high when the kernel is busy.
     behavior: status
+    group: ctrl
 
   - address: 4
     register-name: status
     bitrange: 2
     name: done
+    brief: |
+      Asserted high along with idle when processing completes, cleared when it
+      is started again.
     behavior: status
+    group: ctrl
 
   - address: 8
-    bitrange: 63..0
-    name: result
-    behavior: status
+    name: num_word_matches
+    brief: |
+      Number of times that the word occured in the dataset.
+    behavior: latching
+    group: result
+
+  - address: 12
+    name: num_page_matches
+    brief: |
+      Number of pages that contain the specified word at least as many times as
+      requested by `min_match`.
+    behavior: latching
+    group: result
 
   - address: 16
-    doc: First index to process from Arrow RecordBatch Pages
-    name: Pages_firstidx
+    brief: |
+      First index to process in the input dataset.
+    name: first_idx
     behavior: control
+    group: cmd
+
   - address: 20
-    doc: Last index to process from Arrow RecordBatch Pages
-    name: Pages_lastidx
+    brief: |
+      Last index to process in the input dataset.
+    name: last_idx
     behavior: control
+    group: cmd
 
   - address: 24
-    doc: First index to process from Arrow RecordBatch Result
-    name: Result_firstidx
+    brief: |
+      Reserved for first index in result record batch, should be 0.
+    name: reserved_1
     behavior: control
+    group: cmd
+
   - address: 28
-    doc: Last index to process from Arrow RecordBatch Result
-    name: Result_lastidx
+    brief: |
+      Last index for result record batch. The kernel will always write this
+      many titles; it'll just pad with empty title strings and 0 matches when
+      less articles match than this value implies, and it'll void any matches
+      it doesn't have room for.
+    name: result_size
     behavior: control
+    group: cmd
 
   - address: 32
-    doc: First index to process from Arrow RecordBatch Stats
-    name: Stats_firstidx
+    brief: |
+      Reserved for first index in stats record batch, should be 0. The kernel
+      always writes a single 64-bit integer, with the low word representing the
+      total number of word matches, and the high word representing the total
+      number of article matches.
+    name: reserved_2
     behavior: control
+    group: cmd
+
   - address: 36
-    doc: Last index to process from Arrow RecordBatch Stats
-    name: Stats_lastidx
+    brief: |
+      Reserved for last index in stats record batch, should be 0.
+    name: reserved_3
     behavior: control
+    group: cmd
 
   - address: 40
-    doc: RecordBatch Pages field title
-    name: Pages_title_offsets
+    brief: |
+      Address for the article title offset buffer.
+    name: title_offs_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
 
   - address: 48
-    doc: RecordBatch Pages field title
-    name: Pages_title_values
+    brief: |
+      Address for the article title value buffer.
+    name: title_val_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
 
   - address: 56
-    doc: RecordBatch Pages field text
-    name: Pages_text_offsets
+    brief: |
+      Address for the compressed article data offset buffer.
+    name: text_offs_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
 
   - address: 64
-    doc: RecordBatch Pages field text
-    name: Pages_text_values
+    brief: |
+      Address for the compressed article data value buffer.
+    name: text_val_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
 
   - address: 72
-    doc: RecordBatch Result field title
-    name: Result_title_offsets
+    brief: |
+      Address for the matched article title offset buffer.
+    name: res_title_offs_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
 
   - address: 80
-    doc: RecordBatch Result field title
-    name: Result_title_values
+    brief: |
+      Address for the matched article title value buffer.
+    name: res_title_val_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
 
   - address: 88
-    doc: RecordBatch Result field count
-    name: Result_count_values
+    brief: |
+      Address for the match count value buffer.
+    name: res_match_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
 
   - address: 96
-    doc: RecordBatch Stats field stats
-    name: Stats_stats_values
+    brief: |
+      Address for the 64-bit result "buffer".
+    name: res_stats_addr
     bitrange: 63..0
     behavior: control
+    group: cmd
+
+  - address: 104
+    brief: |
+      The word to match.
+    name: word_data
+    bitrange: 7..0
+    repeat: 32
+    field-repeat: 4
+    behavior: control
+    group: cfg
+
+  - address: 136
+    brief: |
+      Length of the word to match, diminished-one.
+    name: word_len
+    bitrange: 4..0
+    behavior: control
+    group: cfg
+
+  - address: 140
+    brief: |
+      Minimum number of times that the word needs to occur in the article text
+      for the page to be considered to match.
+    name: min_matches
+    bitrange: 15..0
+    behavior: control
+    group: cfg
 
