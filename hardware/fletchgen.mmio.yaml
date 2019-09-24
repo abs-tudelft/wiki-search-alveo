@@ -16,6 +16,10 @@ features:
   bus-width:    32
   optimize:     yes
 
+entity:
+  bus-flatten:  yes
+  bus-prefix:   mmio_
+
 interface:
   flatten:      record
 
@@ -28,7 +32,7 @@ fields:
       Starts the kernel with the parameters specified in the rest of the
       register file.
     behavior: strobe
-    group: ctrl
+    group: cmd
 
   - address: 4
     register-name: status
@@ -37,7 +41,7 @@ fields:
     brief: |
       Asserted high when the kernel is not busy.
     behavior: status
-    group: ctrl
+    group: stat
 
   - address: 4
     register-name: status
@@ -46,7 +50,7 @@ fields:
     brief: |
       Asserted high when the kernel is busy.
     behavior: status
-    group: ctrl
+    group: stat
 
   - address: 4
     register-name: status
@@ -56,7 +60,7 @@ fields:
       Asserted high along with idle when processing completes, cleared when it
       is started again.
     behavior: status
-    group: ctrl
+    group: stat
 
   - address: 8
     name: num_word_matches
@@ -82,7 +86,7 @@ fields:
 
   - address: 20
     brief: |
-      Last index to process in the input dataset.
+      Last index to process in the input dataset, diminished-one.
     name: last_idx
     behavior: control
     group: cmd
@@ -96,10 +100,10 @@ fields:
 
   - address: 28
     brief: |
-      Last index for result record batch. The kernel will always write this
-      many titles; it'll just pad with empty title strings and 0 matches when
-      less articles match than this value implies, and it'll void any matches
-      it doesn't have room for.
+      Number of matches to return. The kernel will always write this many match
+      records; it'll just pad with empty title strings and 0 for the match
+      count when less articles match than this value implies, and it'll void
+      any matches it doesn't have room for.
     name: result_size
     behavior: control
     group: cmd
@@ -116,10 +120,11 @@ fields:
 
   - address: 36
     brief: |
-      Reserved for last index in stats record batch, should be 0.
+      Reserved for last index in stats record batch, should be 1.
     name: reserved_3
     behavior: control
     group: cmd
+    reset: 1
 
   - address: 40
     brief: |

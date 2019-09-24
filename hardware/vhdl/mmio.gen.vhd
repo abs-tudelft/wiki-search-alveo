@@ -17,25 +17,9 @@ entity mmio is
     reset : in std_logic := '0';
 
     -- Interface group for:
-    --  - field busy: Asserted high when the kernel is busy.
-    --  - field done: Asserted high along with idle when processing completes,
-    --    cleared when it is started again.
-    --  - field idle: Asserted high when the kernel is not busy.
-    --  - field start: Starts the kernel with the parameters specified in the
-    --    rest of the register file.
-    g_ctrl_o : out mmio_g_ctrl_o_type := MMIO_G_CTRL_O_RESET;
-    g_ctrl_i : in mmio_g_ctrl_i_type := MMIO_G_CTRL_I_RESET;
-
-    -- Interface group for:
-    --  - field num_page_matches: Number of pages that contain the specified
-    --    word at least as many times as requested by `min_match`.
-    --  - field num_word_matches: Number of times that the word occured in the
-    --    dataset.
-    g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
-
-    -- Interface group for:
     --  - field first_idx: First index to process in the input dataset.
-    --  - field last_idx: Last index to process in the input dataset.
+    --  - field last_idx: Last index to process in the input dataset,
+    --    diminished-one.
     --  - field res_match_addr: Address for the match count value buffer.
     --  - field res_stats_addr: Address for the 64-bit result "buffer".
     --  - field res_title_offs_addr: Address for the matched article title
@@ -49,11 +33,13 @@ entity mmio is
     --    the low word representing the total number of word matches, and the
     --    high word representing the total number of article matches.
     --  - field reserved_3: Reserved for last index in stats record batch,
-    --    should be 0.
-    --  - field result_size: Last index for result record batch. The kernel will
-    --    always write this many titles; it'll just pad with empty title strings
-    --    and 0 matches when less articles match than this value implies, and
-    --    it'll void any matches it doesn't have room for.
+    --    should be 1.
+    --  - field result_size: Number of matches to return. The kernel will always
+    --    write this many match records; it'll just pad with empty title strings
+    --    and 0 for the match count when less articles match than this value
+    --    implies, and it'll void any matches it doesn't have room for.
+    --  - field start: Starts the kernel with the parameters specified in the
+    --    rest of the register file.
     --  - field text_offs_addr: Address for the compressed article data offset
     --    buffer.
     --  - field text_val_addr: Address for the compressed article data value
@@ -63,6 +49,20 @@ entity mmio is
     g_cmd_o : out mmio_g_cmd_o_type := MMIO_G_CMD_O_RESET;
 
     -- Interface group for:
+    --  - field busy: Asserted high when the kernel is busy.
+    --  - field done: Asserted high along with idle when processing completes,
+    --    cleared when it is started again.
+    --  - field idle: Asserted high when the kernel is not busy.
+    g_stat_i : in mmio_g_stat_i_type := MMIO_G_STAT_I_RESET;
+
+    -- Interface group for:
+    --  - field num_page_matches: Number of pages that contain the specified
+    --    word at least as many times as requested by `min_match`.
+    --  - field num_word_matches: Number of times that the word occured in the
+    --    dataset.
+    g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
+
+    -- Interface group for:
     --  - field group word_data: The word to match.
     --  - field min_matches: Minimum number of times that the word needs to
     --    occur in the article text for the page to be considered to match.
@@ -70,8 +70,26 @@ entity mmio is
     g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
 
     -- AXI4-lite + interrupt request bus to the master.
-    bus_i : in  axi4l32_m2s_type := AXI4L32_M2S_RESET;
-    bus_o : out axi4l32_s2m_type := AXI4L32_S2M_RESET
+    mmio_awvalid : in  std_logic := '0';
+    mmio_awready : out std_logic := '1';
+    mmio_awaddr  : in  std_logic_vector(31 downto 0) := X"00000000";
+    mmio_awprot  : in  std_logic_vector(2 downto 0) := "000";
+    mmio_wvalid  : in  std_logic := '0';
+    mmio_wready  : out std_logic := '1';
+    mmio_wdata   : in  std_logic_vector(31 downto 0) := (others => '0');
+    mmio_wstrb   : in  std_logic_vector(3 downto 0) := (others => '0');
+    mmio_bvalid  : out std_logic := '0';
+    mmio_bready  : in  std_logic := '1';
+    mmio_bresp   : out std_logic_vector(1 downto 0) := "00";
+    mmio_arvalid : in  std_logic := '0';
+    mmio_arready : out std_logic := '1';
+    mmio_araddr  : in  std_logic_vector(31 downto 0) := X"00000000";
+    mmio_arprot  : in  std_logic_vector(2 downto 0) := "000";
+    mmio_rvalid  : out std_logic := '0';
+    mmio_rready  : in  std_logic := '1';
+    mmio_rdata   : out std_logic_vector(31 downto 0) := (others => '0');
+    mmio_rresp   : out std_logic_vector(1 downto 0) := "00";
+    mmio_uirq    : out std_logic := '0'
 
   );
 end mmio;
@@ -340,7 +358,7 @@ begin
         := (others => F_FIRST_IDX_R_RESET);
 
     -- Private declarations for field last_idx: Last index to process in the
-    -- input dataset.
+    -- input dataset, diminished-one.
     type f_last_idx_r_type is record
       d : std_logic_vector(31 downto 0);
       v : std_logic;
@@ -367,10 +385,11 @@ begin
     variable f_reserved_1_r : f_reserved_1_r_array(0 to 0)
         := (others => F_RESERVED_1_R_RESET);
 
-    -- Private declarations for field result_size: Last index for result record
-    -- batch. The kernel will always write this many titles; it'll just pad with
-    -- empty title strings and 0 matches when less articles match than this
-    -- value implies, and it'll void any matches it doesn't have room for.
+    -- Private declarations for field result_size: Number of matches to return.
+    -- The kernel will always write this many match records; it'll just pad with
+    -- empty title strings and 0 for the match count when less articles match
+    -- than this value implies, and it'll void any matches it doesn't have room
+    -- for.
     type f_result_size_r_type is record
       d : std_logic_vector(31 downto 0);
       v : std_logic;
@@ -400,7 +419,7 @@ begin
         := (others => F_RESERVED_2_R_RESET);
 
     -- Private declarations for field reserved_3: Reserved for last index in
-    -- stats record batch, should be 0.
+    -- stats record batch, should be 1.
     type f_reserved_3_r_type is record
       d : std_logic_vector(31 downto 0);
       v : std_logic;
@@ -606,10 +625,10 @@ begin
       -------------------------------------------------------------------------
       -- Invalidate responses that were acknowledged by the master in the
       -- previous cycle.
-      if bus_i.b.ready = '1' then
+      if mmio_bready = '1' then
         bus_v.b.valid := '0';
       end if;
-      if bus_i.r.ready = '1' then
+      if mmio_rready = '1' then
         bus_v.r.valid := '0';
       end if;
 
@@ -617,13 +636,19 @@ begin
       -- any of the incoming channels, we must latch any incoming requests. If
       -- we're ready but there is no incoming request this becomes don't-care.
       if bus_v.aw.ready = '1' then
-        awl := bus_i.aw;
+        awl.valid := mmio_awvalid;
+        awl.addr  := mmio_awaddr;
+        awl.prot  := mmio_awprot;
       end if;
       if bus_v.w.ready = '1' then
-        wl := bus_i.w;
+        wl.valid := mmio_wvalid;
+        wl.data  := mmio_wdata;
+        wl.strb  := mmio_wstrb;
       end if;
       if bus_v.ar.ready = '1' then
-        arl := bus_i.ar;
+        arl.valid := mmio_arvalid;
+        arl.addr  := mmio_araddr;
+        arl.prot  := mmio_arprot;
       end if;
 
       -------------------------------------------------------------------------
@@ -679,20 +704,20 @@ begin
       -- busy.
 
       -- Handle hardware write for field idle: status.
-      f_idle_r((0)).d := g_ctrl_i.f_idle_write_data;
+      f_idle_r((0)).d := g_stat_i.f_idle_write_data;
       f_idle_r((0)).v := '1';
 
       -- Pre-bus logic for field busy: Asserted high when the kernel is busy.
 
       -- Handle hardware write for field busy: status.
-      f_busy_r((0)).d := g_ctrl_i.f_busy_write_data;
+      f_busy_r((0)).d := g_stat_i.f_busy_write_data;
       f_busy_r((0)).v := '1';
 
       -- Pre-bus logic for field done: Asserted high along with idle when
       -- processing completes, cleared when it is started again.
 
       -- Handle hardware write for field done: status.
-      f_done_r((0)).d := g_ctrl_i.f_done_write_data;
+      f_done_r((0)).d := g_stat_i.f_done_write_data;
       f_done_r((0)).v := '1';
 
       -- Pre-bus logic for field num_word_matches: Number of times that the word
@@ -909,7 +934,7 @@ begin
           end if;
 
           -- Read logic for field last_idx: Last index to process in the input
-          -- dataset.
+          -- dataset, diminished-one.
 
           if r_req then
             tmp_data32 := r_hold(31 downto 0);
@@ -980,11 +1005,11 @@ begin
 
           end if;
 
-          -- Read logic for field result_size: Last index for result record
-          -- batch. The kernel will always write this many titles; it'll just
-          -- pad with empty title strings and 0 matches when less articles match
-          -- than this value implies, and it'll void any matches it doesn't have
-          -- room for.
+          -- Read logic for field result_size: Number of matches to return. The
+          -- kernel will always write this many match records; it'll just pad
+          -- with empty title strings and 0 for the match count when less
+          -- articles match than this value implies, and it'll void any matches
+          -- it doesn't have room for.
 
           if r_req then
             tmp_data32 := r_hold(31 downto 0);
@@ -1059,7 +1084,7 @@ begin
           end if;
 
           -- Read logic for field reserved_3: Reserved for last index in stats
-          -- record batch, should be 0.
+          -- record batch, should be 1.
 
           if r_req then
             tmp_data32 := r_hold(31 downto 0);
@@ -2327,7 +2352,7 @@ begin
           end if;
 
           -- Write logic for field last_idx: Last index to process in the input
-          -- dataset.
+          -- dataset, diminished-one.
 
           tmp_data32 := w_hold(31 downto 0);
           tmp_strb32 := w_hstb(31 downto 0);
@@ -2378,11 +2403,11 @@ begin
             w_multi := '0';
           end if;
 
-          -- Write logic for field result_size: Last index for result record
-          -- batch. The kernel will always write this many titles; it'll just
-          -- pad with empty title strings and 0 matches when less articles match
-          -- than this value implies, and it'll void any matches it doesn't have
-          -- room for.
+          -- Write logic for field result_size: Number of matches to return. The
+          -- kernel will always write this many match records; it'll just pad
+          -- with empty title strings and 0 for the match count when less
+          -- articles match than this value implies, and it'll void any matches
+          -- it doesn't have room for.
 
           tmp_data32 := w_hold(31 downto 0);
           tmp_strb32 := w_hstb(31 downto 0);
@@ -2437,7 +2462,7 @@ begin
           end if;
 
           -- Write logic for field reserved_3: Reserved for last index in stats
-          -- record batch, should be 0.
+          -- record batch, should be 1.
 
           tmp_data32 := w_hold(31 downto 0);
           tmp_strb32 := w_hstb(31 downto 0);
@@ -3383,7 +3408,7 @@ begin
         f_start_r((0)).inval := '0';
       end if;
       -- Assign the read outputs for field start.
-      g_ctrl_o.f_start_data <= f_start_r((0)).d;
+      g_cmd_o.f_start_data <= f_start_r((0)).d;
 
       -- Post-bus logic for field num_word_matches: Number of times that the
       -- word occured in the dataset.
@@ -3415,7 +3440,7 @@ begin
       g_cmd_o.f_first_idx_data <= f_first_idx_r((0)).d;
 
       -- Post-bus logic for field last_idx: Last index to process in the input
-      -- dataset.
+      -- dataset, diminished-one.
 
       -- Handle reset for field last_idx.
       if reset = '1' then
@@ -3436,11 +3461,11 @@ begin
       -- Assign the read outputs for field reserved_1.
       g_cmd_o.f_reserved_1_data <= f_reserved_1_r((0)).d;
 
-      -- Post-bus logic for field result_size: Last index for result record
-      -- batch. The kernel will always write this many titles; it'll just pad
-      -- with empty title strings and 0 matches when less articles match than
-      -- this value implies, and it'll void any matches it doesn't have room
-      -- for.
+      -- Post-bus logic for field result_size: Number of matches to return. The
+      -- kernel will always write this many match records; it'll just pad with
+      -- empty title strings and 0 for the match count when less articles match
+      -- than this value implies, and it'll void any matches it doesn't have
+      -- room for.
 
       -- Handle reset for field result_size.
       if reset = '1' then
@@ -3465,12 +3490,12 @@ begin
       g_cmd_o.f_reserved_2_data <= f_reserved_2_r((0)).d;
 
       -- Post-bus logic for field reserved_3: Reserved for last index in stats
-      -- record batch, should be 0.
+      -- record batch, should be 1.
 
       -- Handle reset for field reserved_3.
       if reset = '1' then
-        f_reserved_3_r((0)).d := (others => '0');
-        f_reserved_3_r((0)).v := '0';
+        f_reserved_3_r((0)).d := "00000000000000000000000000000001";
+        f_reserved_3_r((0)).v := '1';
       end if;
       -- Assign the read outputs for field reserved_3.
       g_cmd_o.f_reserved_3_data <= f_reserved_3_r((0)).d;
@@ -3674,7 +3699,15 @@ begin
         r_hold     := (others => '0');
       end if;
 
-      bus_o <= bus_v;
+      mmio_awready <= bus_v.aw.ready;
+      mmio_wready  <= bus_v.w.ready;
+      mmio_bvalid  <= bus_v.b.valid;
+      mmio_bresp   <= bus_v.b.resp;
+      mmio_arready <= bus_v.ar.ready;
+      mmio_rvalid  <= bus_v.r.valid;
+      mmio_rdata   <= bus_v.r.data;
+      mmio_rresp   <= bus_v.r.resp;
+      mmio_uirq    <= bus_v.u.irq;
 
     end if;
   end process;
