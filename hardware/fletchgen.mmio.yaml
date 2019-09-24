@@ -1,0 +1,134 @@
+metadata:
+  name: mmio
+  doc: Fletchgen generated MMIO configuration.
+  
+entity:
+  bus-flatten:  yes
+  bus-prefix:   mmio_
+  clock-name:   bcd_clk
+  reset-name:   bcd_reset
+
+features:
+  bus-width:    32
+  optimize:     yes
+
+interface:
+  flatten:      yes
+
+fields: 
+  - address: 0
+    register-name: control
+    bitrange: 0
+    name: start
+    behavior: strobe
+
+  - address: 0
+    register-name: control
+    bitrange: 1
+    name: stop
+    behavior: strobe
+
+  - address: 0
+    register-name: control
+    bitrange: 2
+    name: reset
+    behavior: strobe
+
+  - address: 4
+    register-name: status
+    bitrange: 0
+    name: idle
+    behavior: status
+
+  - address: 4
+    register-name: status
+    bitrange: 1
+    name: busy
+    behavior: status
+
+  - address: 4
+    register-name: status
+    bitrange: 2
+    name: done
+    behavior: status
+
+  - address: 8
+    bitrange: 63..0
+    name: result
+    behavior: status
+
+  - address: 16
+    doc: First index to process from Arrow RecordBatch Pages
+    name: Pages_firstidx
+    behavior: control
+  - address: 20
+    doc: Last index to process from Arrow RecordBatch Pages
+    name: Pages_lastidx
+    behavior: control
+
+  - address: 24
+    doc: First index to process from Arrow RecordBatch Result
+    name: Result_firstidx
+    behavior: control
+  - address: 28
+    doc: Last index to process from Arrow RecordBatch Result
+    name: Result_lastidx
+    behavior: control
+
+  - address: 32
+    doc: First index to process from Arrow RecordBatch Stats
+    name: Stats_firstidx
+    behavior: control
+  - address: 36
+    doc: Last index to process from Arrow RecordBatch Stats
+    name: Stats_lastidx
+    behavior: control
+
+  - address: 40
+    doc: RecordBatch Pages field title
+    name: Pages_title_offsets
+    bitrange: 63..0
+    behavior: control
+
+  - address: 48
+    doc: RecordBatch Pages field title
+    name: Pages_title_values
+    bitrange: 63..0
+    behavior: control
+
+  - address: 56
+    doc: RecordBatch Pages field text
+    name: Pages_text_offsets
+    bitrange: 63..0
+    behavior: control
+
+  - address: 64
+    doc: RecordBatch Pages field text
+    name: Pages_text_values
+    bitrange: 63..0
+    behavior: control
+
+  - address: 72
+    doc: RecordBatch Result field title
+    name: Result_title_offsets
+    bitrange: 63..0
+    behavior: control
+
+  - address: 80
+    doc: RecordBatch Result field title
+    name: Result_title_values
+    bitrange: 63..0
+    behavior: control
+
+  - address: 88
+    doc: RecordBatch Result field count
+    name: Result_count_values
+    bitrange: 63..0
+    behavior: control
+
+  - address: 96
+    doc: RecordBatch Stats field stats
+    name: Stats_stats_values
+    bitrange: 63..0
+    behavior: control
+
