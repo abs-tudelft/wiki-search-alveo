@@ -3,6 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library work;
+use work.vhsnunzip_pkg.all;
 use work.vhdmmio_pkg.all;
 use work.mmio_pkg.all;
 
@@ -192,6 +193,19 @@ architecture Implementation of word_match is
   signal mmio_result            : mmio_g_result_i_type;
   signal mmio_cfg               : mmio_g_cfg_o_type;
 
+  -- Decompressed article text stream.
+  signal pages_text_chars_valid : std_logic;
+  signal pages_text_chars_ready : std_logic;
+  signal pages_text_chars_dvalid: std_logic;
+  signal pages_text_chars_last  : std_logic;
+  signal pages_text_chars_data  : std_logic_vector(63 downto 0);
+  signal pages_text_chars_count : std_logic_vector(3 downto 0);
+
+  -- Stream of pattern match counts for each article.
+  signal match_count_valid      : std_logic;
+  signal match_count_ready      : std_logic;
+  signal match_count_amount     : std_logic_vector(15 downto 0);
+
 begin
 
   -- Instantiate the VHDmmio register file.
@@ -277,6 +291,47 @@ begin
       stats_stats_unl_valid     => stats_stats_unl_valid,
       stats_stats_unl_ready     => stats_stats_unl_ready,
       stats_stats_unl_tag       => stats_stats_unl_tag
+    );
+
+  -- Void the article text length stream; we don't need it.
+  pages_text_ready <= '1';
+
+  -- Decompress the article text.
+  vhsnunzip_inst: vhsnunzip_unbuffered
+    generic map (
+      RAM_STYLE                 => "URAM"
+    )
+    port map (
+      clk                       => kcd_clk,
+      reset                     => kcd_reset,
+      co_valid                  => pages_text_bytes_valid,
+      co_ready                  => pages_text_bytes_ready,
+      co_data                   => pages_text_bytes_data,
+      co_cnt                    => pages_text_bytes_count(2 downto 0),
+      co_last                   => pages_text_bytes_last,
+      de_valid                  => pages_text_chars_valid,
+      de_ready                  => pages_text_chars_ready,
+      de_dvalid                 => pages_text_chars_dvalid,
+      de_data                   => pages_text_chars_data,
+      de_cnt                    => pages_text_chars_count,
+      de_last                   => pages_text_chars_last
+    );
+
+  -- Match decompressed article text against the search pattern.
+  matcher_inst: entity work.word_match_matcher
+    port map (
+      clk                       => kcd_clk,
+      reset                     => kcd_reset,
+      mmio_cfg                  => mmio_cfg,
+      pages_text_chars_valid    => pages_text_chars_valid,
+      pages_text_chars_ready    => pages_text_chars_ready,
+      pages_text_chars_dvalid   => pages_text_chars_dvalid,
+      pages_text_chars_last     => pages_text_chars_last,
+      pages_text_chars_data     => pages_text_chars_data,
+      pages_text_chars_count    => pages_text_chars_count,
+      match_count_valid         => match_count_valid,
+      match_count_ready         => match_count_ready,
+      match_count_amount        => match_count_amount
     );
 
 end architecture;

@@ -63,10 +63,15 @@ entity mmio is
     g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
 
     -- Interface group for:
-    --  - field group word_data: The word to match.
+    --  - field group search_data: The word to match. The length is set by
+    --    `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The character
+    --    used to pad the unused bytes before the word is don't care.
     --  - field min_matches: Minimum number of times that the word needs to
     --    occur in the article text for the page to be considered to match.
-    --  - field word_len: Length of the word to match, diminished-one.
+    --  - field search_first: Index of the first valid character in
+    --    `search_data`.
+    --  - field whole_words: When set, interpunction/spacing must exist before
+    --    and after the word for it to match.
     g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
 
     -- AXI4-lite + interrupt request bus to the master.
@@ -544,32 +549,49 @@ begin
     variable f_res_stats_addr_r : f_res_stats_addr_r_array(0 to 0)
         := (others => F_RES_STATS_ADDR_R_RESET);
 
-    -- Private declarations for field group word_data: The word to match.
-    type f_word_data_r_type is record
+    -- Private declarations for field group search_data: The word to match. The
+    -- length is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+    -- The character used to pad the unused bytes before the word is don't care.
+    type f_search_data_r_type is record
       d : std_logic_vector(7 downto 0);
       v : std_logic;
     end record;
-    constant F_WORD_DATA_R_RESET : f_word_data_r_type := (
+    constant F_SEARCH_DATA_R_RESET : f_search_data_r_type := (
       d => (others => '0'),
       v => '0'
     );
-    type f_word_data_r_array is array (natural range <>) of f_word_data_r_type;
-    variable f_word_data_r : f_word_data_r_array(0 to 31)
-        := (others => F_WORD_DATA_R_RESET);
+    type f_search_data_r_array is array (natural range <>) of f_search_data_r_type;
+    variable f_search_data_r : f_search_data_r_array(0 to 31)
+        := (others => F_SEARCH_DATA_R_RESET);
 
-    -- Private declarations for field word_len: Length of the word to match,
-    -- diminished-one.
-    type f_word_len_r_type is record
+    -- Private declarations for field search_first: Index of the first valid
+    -- character in `search_data`.
+    type f_search_first_r_type is record
       d : std_logic_vector(4 downto 0);
       v : std_logic;
     end record;
-    constant F_WORD_LEN_R_RESET : f_word_len_r_type := (
+    constant F_SEARCH_FIRST_R_RESET : f_search_first_r_type := (
       d => (others => '0'),
       v => '0'
     );
-    type f_word_len_r_array is array (natural range <>) of f_word_len_r_type;
-    variable f_word_len_r : f_word_len_r_array(0 to 0)
-        := (others => F_WORD_LEN_R_RESET);
+    type f_search_first_r_array is array (natural range <>) of f_search_first_r_type;
+    variable f_search_first_r : f_search_first_r_array(0 to 0)
+        := (others => F_SEARCH_FIRST_R_RESET);
+
+    -- Private declarations for field whole_words: When set,
+    -- interpunction/spacing must exist before and after the word for it to
+    -- match.
+    type f_whole_words_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_WHOLE_WORDS_R_RESET : f_whole_words_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_whole_words_r_array is array (natural range <>) of f_whole_words_r_type;
+    variable f_whole_words_r : f_whole_words_r_array(0 to 0)
+        := (others => F_WHOLE_WORDS_R_RESET);
 
     -- Private declarations for field min_matches: Minimum number of times that
     -- the word needs to occur in the article text for the page to be considered
@@ -1547,7 +1569,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data0: The word to match.
+          -- Read logic for field search_data0: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -1555,7 +1580,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((0)).d;
+            tmp_data8 := f_search_data_r((0)).d;
             r_ack := true;
 
           end if;
@@ -1563,7 +1588,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data1: The word to match.
+          -- Read logic for field search_data1: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -1571,7 +1599,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((1)).d;
+            tmp_data8 := f_search_data_r((1)).d;
             r_ack := true;
 
           end if;
@@ -1579,7 +1607,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data2: The word to match.
+          -- Read logic for field search_data2: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -1587,7 +1618,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((2)).d;
+            tmp_data8 := f_search_data_r((2)).d;
             r_ack := true;
 
           end if;
@@ -1595,7 +1626,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data3: The word to match.
+          -- Read logic for field search_data3: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -1603,7 +1637,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((3)).d;
+            tmp_data8 := f_search_data_r((3)).d;
             r_ack := true;
 
           end if;
@@ -1611,8 +1645,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data0_reg: block containing bits 31..0 of
-          -- register `word_data0_reg` (`WORD_DATA0`).
+          -- Read logic for block search_data0_reg: block containing bits 31..0
+          -- of register `search_data0_reg` (`SEARCH_DATA0`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -1630,7 +1664,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data4: The word to match.
+          -- Read logic for field search_data4: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -1638,7 +1675,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((4)).d;
+            tmp_data8 := f_search_data_r((4)).d;
             r_ack := true;
 
           end if;
@@ -1646,7 +1683,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data5: The word to match.
+          -- Read logic for field search_data5: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -1654,7 +1694,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((5)).d;
+            tmp_data8 := f_search_data_r((5)).d;
             r_ack := true;
 
           end if;
@@ -1662,7 +1702,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data6: The word to match.
+          -- Read logic for field search_data6: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -1670,7 +1713,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((6)).d;
+            tmp_data8 := f_search_data_r((6)).d;
             r_ack := true;
 
           end if;
@@ -1678,7 +1721,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data7: The word to match.
+          -- Read logic for field search_data7: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -1686,7 +1732,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((7)).d;
+            tmp_data8 := f_search_data_r((7)).d;
             r_ack := true;
 
           end if;
@@ -1694,8 +1740,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data4_reg: block containing bits 31..0 of
-          -- register `word_data4_reg` (`WORD_DATA4`).
+          -- Read logic for block search_data4_reg: block containing bits 31..0
+          -- of register `search_data4_reg` (`SEARCH_DATA4`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -1713,7 +1759,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data8: The word to match.
+          -- Read logic for field search_data8: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -1721,7 +1770,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((8)).d;
+            tmp_data8 := f_search_data_r((8)).d;
             r_ack := true;
 
           end if;
@@ -1729,7 +1778,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data9: The word to match.
+          -- Read logic for field search_data9: The word to match. The length is
+          -- set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+          -- character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -1737,7 +1789,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((9)).d;
+            tmp_data8 := f_search_data_r((9)).d;
             r_ack := true;
 
           end if;
@@ -1745,7 +1797,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data10: The word to match.
+          -- Read logic for field search_data10: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -1753,7 +1808,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((10)).d;
+            tmp_data8 := f_search_data_r((10)).d;
             r_ack := true;
 
           end if;
@@ -1761,7 +1816,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data11: The word to match.
+          -- Read logic for field search_data11: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -1769,7 +1827,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((11)).d;
+            tmp_data8 := f_search_data_r((11)).d;
             r_ack := true;
 
           end if;
@@ -1777,8 +1835,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data8_reg: block containing bits 31..0 of
-          -- register `word_data8_reg` (`WORD_DATA8`).
+          -- Read logic for block search_data8_reg: block containing bits 31..0
+          -- of register `search_data8_reg` (`SEARCH_DATA8`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -1796,7 +1854,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data12: The word to match.
+          -- Read logic for field search_data12: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -1804,7 +1865,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((12)).d;
+            tmp_data8 := f_search_data_r((12)).d;
             r_ack := true;
 
           end if;
@@ -1812,7 +1873,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data13: The word to match.
+          -- Read logic for field search_data13: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -1820,7 +1884,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((13)).d;
+            tmp_data8 := f_search_data_r((13)).d;
             r_ack := true;
 
           end if;
@@ -1828,7 +1892,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data14: The word to match.
+          -- Read logic for field search_data14: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -1836,7 +1903,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((14)).d;
+            tmp_data8 := f_search_data_r((14)).d;
             r_ack := true;
 
           end if;
@@ -1844,7 +1911,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data15: The word to match.
+          -- Read logic for field search_data15: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -1852,7 +1922,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((15)).d;
+            tmp_data8 := f_search_data_r((15)).d;
             r_ack := true;
 
           end if;
@@ -1860,8 +1930,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data12_reg: block containing bits 31..0
-          -- of register `word_data12_reg` (`WORD_DATA12`).
+          -- Read logic for block search_data12_reg: block containing bits 31..0
+          -- of register `search_data12_reg` (`SEARCH_DATA12`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -1879,7 +1949,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data16: The word to match.
+          -- Read logic for field search_data16: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -1887,7 +1960,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((16)).d;
+            tmp_data8 := f_search_data_r((16)).d;
             r_ack := true;
 
           end if;
@@ -1895,7 +1968,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data17: The word to match.
+          -- Read logic for field search_data17: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -1903,7 +1979,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((17)).d;
+            tmp_data8 := f_search_data_r((17)).d;
             r_ack := true;
 
           end if;
@@ -1911,7 +1987,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data18: The word to match.
+          -- Read logic for field search_data18: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -1919,7 +1998,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((18)).d;
+            tmp_data8 := f_search_data_r((18)).d;
             r_ack := true;
 
           end if;
@@ -1927,7 +2006,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data19: The word to match.
+          -- Read logic for field search_data19: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -1935,7 +2017,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((19)).d;
+            tmp_data8 := f_search_data_r((19)).d;
             r_ack := true;
 
           end if;
@@ -1943,8 +2025,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data16_reg: block containing bits 31..0
-          -- of register `word_data16_reg` (`WORD_DATA16`).
+          -- Read logic for block search_data16_reg: block containing bits 31..0
+          -- of register `search_data16_reg` (`SEARCH_DATA16`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -1962,7 +2044,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data20: The word to match.
+          -- Read logic for field search_data20: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -1970,7 +2055,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((20)).d;
+            tmp_data8 := f_search_data_r((20)).d;
             r_ack := true;
 
           end if;
@@ -1978,7 +2063,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data21: The word to match.
+          -- Read logic for field search_data21: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -1986,7 +2074,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((21)).d;
+            tmp_data8 := f_search_data_r((21)).d;
             r_ack := true;
 
           end if;
@@ -1994,7 +2082,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data22: The word to match.
+          -- Read logic for field search_data22: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -2002,7 +2093,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((22)).d;
+            tmp_data8 := f_search_data_r((22)).d;
             r_ack := true;
 
           end if;
@@ -2010,7 +2101,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data23: The word to match.
+          -- Read logic for field search_data23: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -2018,7 +2112,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((23)).d;
+            tmp_data8 := f_search_data_r((23)).d;
             r_ack := true;
 
           end if;
@@ -2026,8 +2120,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data20_reg: block containing bits 31..0
-          -- of register `word_data20_reg` (`WORD_DATA20`).
+          -- Read logic for block search_data20_reg: block containing bits 31..0
+          -- of register `search_data20_reg` (`SEARCH_DATA20`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -2045,7 +2139,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data24: The word to match.
+          -- Read logic for field search_data24: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -2053,7 +2150,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((24)).d;
+            tmp_data8 := f_search_data_r((24)).d;
             r_ack := true;
 
           end if;
@@ -2061,7 +2158,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data25: The word to match.
+          -- Read logic for field search_data25: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -2069,7 +2169,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((25)).d;
+            tmp_data8 := f_search_data_r((25)).d;
             r_ack := true;
 
           end if;
@@ -2077,7 +2177,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data26: The word to match.
+          -- Read logic for field search_data26: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -2085,7 +2188,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((26)).d;
+            tmp_data8 := f_search_data_r((26)).d;
             r_ack := true;
 
           end if;
@@ -2093,7 +2196,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data27: The word to match.
+          -- Read logic for field search_data27: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -2101,7 +2207,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((27)).d;
+            tmp_data8 := f_search_data_r((27)).d;
             r_ack := true;
 
           end if;
@@ -2109,8 +2215,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data24_reg: block containing bits 31..0
-          -- of register `word_data24_reg` (`WORD_DATA24`).
+          -- Read logic for block search_data24_reg: block containing bits 31..0
+          -- of register `search_data24_reg` (`SEARCH_DATA24`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -2128,7 +2234,10 @@ begin
 
           end if;
 
-          -- Read logic for field word_data28: The word to match.
+          -- Read logic for field search_data28: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(7 downto 0);
@@ -2136,7 +2245,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((28)).d;
+            tmp_data8 := f_search_data_r((28)).d;
             r_ack := true;
 
           end if;
@@ -2144,7 +2253,10 @@ begin
             r_hold(7 downto 0) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data29: The word to match.
+          -- Read logic for field search_data29: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(15 downto 8);
@@ -2152,7 +2264,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((29)).d;
+            tmp_data8 := f_search_data_r((29)).d;
             r_ack := true;
 
           end if;
@@ -2160,7 +2272,10 @@ begin
             r_hold(15 downto 8) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data30: The word to match.
+          -- Read logic for field search_data30: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(23 downto 16);
@@ -2168,7 +2283,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((30)).d;
+            tmp_data8 := f_search_data_r((30)).d;
             r_ack := true;
 
           end if;
@@ -2176,7 +2291,10 @@ begin
             r_hold(23 downto 16) := tmp_data8;
           end if;
 
-          -- Read logic for field word_data31: The word to match.
+          -- Read logic for field search_data31: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           if r_req then
             tmp_data8 := r_hold(31 downto 24);
@@ -2184,7 +2302,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data8 := f_word_data_r((31)).d;
+            tmp_data8 := f_search_data_r((31)).d;
             r_ack := true;
 
           end if;
@@ -2192,8 +2310,8 @@ begin
             r_hold(31 downto 24) := tmp_data8;
           end if;
 
-          -- Read logic for block word_data28_reg: block containing bits 31..0
-          -- of register `word_data28_reg` (`WORD_DATA28`).
+          -- Read logic for block search_data28_reg: block containing bits 31..0
+          -- of register `search_data28_reg` (`SEARCH_DATA28`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -2211,8 +2329,8 @@ begin
 
           end if;
 
-          -- Read logic for field word_len: Length of the word to match,
-          -- diminished-one.
+          -- Read logic for field search_first: Index of the first valid
+          -- character in `search_data`.
 
           if r_req then
             tmp_data5 := r_hold(4 downto 0);
@@ -2220,7 +2338,7 @@ begin
           if r_req then
 
             -- Regular access logic. Read mode: enabled.
-            tmp_data5 := f_word_len_r((0)).d;
+            tmp_data5 := f_search_first_r((0)).d;
             r_ack := true;
 
           end if;
@@ -2228,8 +2346,25 @@ begin
             r_hold(4 downto 0) := tmp_data5;
           end if;
 
-          -- Read logic for block word_len_reg: block containing bits 31..0 of
-          -- register `word_len_reg` (`WORD_LEN`).
+          -- Read logic for field whole_words: When set, interpunction/spacing
+          -- must exist before and after the word for it to match.
+
+          if r_req then
+            tmp_data := r_hold(8);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_whole_words_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(8) := tmp_data;
+          end if;
+
+          -- Read logic for block search_first_reg: block containing bits 31..0
+          -- of register `search_first_reg` (`SEARCH_FIRST`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -2806,15 +2941,18 @@ begin
         when "011010" =>
           -- w_addr = 000000000000000000000000011010--
 
-          -- Write logic for block word_data0_reg: block containing bits 31..0
-          -- of register `word_data0_reg` (`WORD_DATA0`).
+          -- Write logic for block search_data0_reg: block containing bits 31..0
+          -- of register `search_data0_reg` (`SEARCH_DATA0`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data0: The word to match.
+          -- Write logic for field search_data0: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -2822,13 +2960,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((0)).d := (f_word_data_r((0)).d and not tmp_strb8)
+            f_search_data_r((0)).d := (f_search_data_r((0)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data1: The word to match.
+          -- Write logic for field search_data1: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -2836,13 +2977,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((1)).d := (f_word_data_r((1)).d and not tmp_strb8)
+            f_search_data_r((1)).d := (f_search_data_r((1)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data2: The word to match.
+          -- Write logic for field search_data2: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -2850,13 +2994,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((2)).d := (f_word_data_r((2)).d and not tmp_strb8)
+            f_search_data_r((2)).d := (f_search_data_r((2)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data3: The word to match.
+          -- Write logic for field search_data3: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -2864,7 +3011,7 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((3)).d := (f_word_data_r((3)).d and not tmp_strb8)
+            f_search_data_r((3)).d := (f_search_data_r((3)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
@@ -2873,15 +3020,18 @@ begin
         when "011011" =>
           -- w_addr = 000000000000000000000000011011--
 
-          -- Write logic for block word_data4_reg: block containing bits 31..0
-          -- of register `word_data4_reg` (`WORD_DATA4`).
+          -- Write logic for block search_data4_reg: block containing bits 31..0
+          -- of register `search_data4_reg` (`SEARCH_DATA4`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data4: The word to match.
+          -- Write logic for field search_data4: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -2889,13 +3039,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((4)).d := (f_word_data_r((4)).d and not tmp_strb8)
+            f_search_data_r((4)).d := (f_search_data_r((4)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data5: The word to match.
+          -- Write logic for field search_data5: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -2903,13 +3056,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((5)).d := (f_word_data_r((5)).d and not tmp_strb8)
+            f_search_data_r((5)).d := (f_search_data_r((5)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data6: The word to match.
+          -- Write logic for field search_data6: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -2917,13 +3073,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((6)).d := (f_word_data_r((6)).d and not tmp_strb8)
+            f_search_data_r((6)).d := (f_search_data_r((6)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data7: The word to match.
+          -- Write logic for field search_data7: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -2931,7 +3090,7 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((7)).d := (f_word_data_r((7)).d and not tmp_strb8)
+            f_search_data_r((7)).d := (f_search_data_r((7)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
@@ -2940,15 +3099,18 @@ begin
         when "011100" =>
           -- w_addr = 000000000000000000000000011100--
 
-          -- Write logic for block word_data8_reg: block containing bits 31..0
-          -- of register `word_data8_reg` (`WORD_DATA8`).
+          -- Write logic for block search_data8_reg: block containing bits 31..0
+          -- of register `search_data8_reg` (`SEARCH_DATA8`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data8: The word to match.
+          -- Write logic for field search_data8: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -2956,13 +3118,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((8)).d := (f_word_data_r((8)).d and not tmp_strb8)
+            f_search_data_r((8)).d := (f_search_data_r((8)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data9: The word to match.
+          -- Write logic for field search_data9: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -2970,13 +3135,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((9)).d := (f_word_data_r((9)).d and not tmp_strb8)
+            f_search_data_r((9)).d := (f_search_data_r((9)).d and not tmp_strb8)
                 or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data10: The word to match.
+          -- Write logic for field search_data10: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -2984,13 +3152,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((10)).d := (f_word_data_r((10)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((10)).d
+                := (f_search_data_r((10)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data11: The word to match.
+          -- Write logic for field search_data11: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -2998,8 +3169,8 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((11)).d := (f_word_data_r((11)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((11)).d
+                := (f_search_data_r((11)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
@@ -3007,15 +3178,18 @@ begin
         when "011101" =>
           -- w_addr = 000000000000000000000000011101--
 
-          -- Write logic for block word_data12_reg: block containing bits 31..0
-          -- of register `word_data12_reg` (`WORD_DATA12`).
+          -- Write logic for block search_data12_reg: block containing bits
+          -- 31..0 of register `search_data12_reg` (`SEARCH_DATA12`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data12: The word to match.
+          -- Write logic for field search_data12: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -3023,13 +3197,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((12)).d := (f_word_data_r((12)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((12)).d
+                := (f_search_data_r((12)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data13: The word to match.
+          -- Write logic for field search_data13: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -3037,13 +3214,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((13)).d := (f_word_data_r((13)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((13)).d
+                := (f_search_data_r((13)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data14: The word to match.
+          -- Write logic for field search_data14: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -3051,13 +3231,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((14)).d := (f_word_data_r((14)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((14)).d
+                := (f_search_data_r((14)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data15: The word to match.
+          -- Write logic for field search_data15: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -3065,8 +3248,8 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((15)).d := (f_word_data_r((15)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((15)).d
+                := (f_search_data_r((15)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
@@ -3074,15 +3257,18 @@ begin
         when "011110" =>
           -- w_addr = 000000000000000000000000011110--
 
-          -- Write logic for block word_data16_reg: block containing bits 31..0
-          -- of register `word_data16_reg` (`WORD_DATA16`).
+          -- Write logic for block search_data16_reg: block containing bits
+          -- 31..0 of register `search_data16_reg` (`SEARCH_DATA16`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data16: The word to match.
+          -- Write logic for field search_data16: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -3090,13 +3276,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((16)).d := (f_word_data_r((16)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((16)).d
+                := (f_search_data_r((16)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data17: The word to match.
+          -- Write logic for field search_data17: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -3104,13 +3293,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((17)).d := (f_word_data_r((17)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((17)).d
+                := (f_search_data_r((17)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data18: The word to match.
+          -- Write logic for field search_data18: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -3118,13 +3310,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((18)).d := (f_word_data_r((18)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((18)).d
+                := (f_search_data_r((18)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data19: The word to match.
+          -- Write logic for field search_data19: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -3132,8 +3327,8 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((19)).d := (f_word_data_r((19)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((19)).d
+                := (f_search_data_r((19)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
@@ -3141,15 +3336,18 @@ begin
         when "011111" =>
           -- w_addr = 000000000000000000000000011111--
 
-          -- Write logic for block word_data20_reg: block containing bits 31..0
-          -- of register `word_data20_reg` (`WORD_DATA20`).
+          -- Write logic for block search_data20_reg: block containing bits
+          -- 31..0 of register `search_data20_reg` (`SEARCH_DATA20`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data20: The word to match.
+          -- Write logic for field search_data20: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -3157,13 +3355,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((20)).d := (f_word_data_r((20)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((20)).d
+                := (f_search_data_r((20)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data21: The word to match.
+          -- Write logic for field search_data21: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -3171,13 +3372,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((21)).d := (f_word_data_r((21)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((21)).d
+                := (f_search_data_r((21)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data22: The word to match.
+          -- Write logic for field search_data22: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -3185,13 +3389,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((22)).d := (f_word_data_r((22)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((22)).d
+                := (f_search_data_r((22)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data23: The word to match.
+          -- Write logic for field search_data23: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -3199,8 +3406,8 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((23)).d := (f_word_data_r((23)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((23)).d
+                := (f_search_data_r((23)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
@@ -3208,15 +3415,18 @@ begin
         when "100000" =>
           -- w_addr = 000000000000000000000000100000--
 
-          -- Write logic for block word_data24_reg: block containing bits 31..0
-          -- of register `word_data24_reg` (`WORD_DATA24`).
+          -- Write logic for block search_data24_reg: block containing bits
+          -- 31..0 of register `search_data24_reg` (`SEARCH_DATA24`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data24: The word to match.
+          -- Write logic for field search_data24: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -3224,13 +3434,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((24)).d := (f_word_data_r((24)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((24)).d
+                := (f_search_data_r((24)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data25: The word to match.
+          -- Write logic for field search_data25: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -3238,13 +3451,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((25)).d := (f_word_data_r((25)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((25)).d
+                := (f_search_data_r((25)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data26: The word to match.
+          -- Write logic for field search_data26: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -3252,13 +3468,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((26)).d := (f_word_data_r((26)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((26)).d
+                := (f_search_data_r((26)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data27: The word to match.
+          -- Write logic for field search_data27: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -3266,8 +3485,8 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((27)).d := (f_word_data_r((27)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((27)).d
+                := (f_search_data_r((27)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
@@ -3275,15 +3494,18 @@ begin
         when "100001" =>
           -- w_addr = 000000000000000000000000100001--
 
-          -- Write logic for block word_data28_reg: block containing bits 31..0
-          -- of register `word_data28_reg` (`WORD_DATA28`).
+          -- Write logic for block search_data28_reg: block containing bits
+          -- 31..0 of register `search_data28_reg` (`SEARCH_DATA28`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_data28: The word to match.
+          -- Write logic for field search_data28: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(7 downto 0);
           tmp_strb8 := w_hstb(7 downto 0);
@@ -3291,13 +3513,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((28)).d := (f_word_data_r((28)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((28)).d
+                := (f_search_data_r((28)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data29: The word to match.
+          -- Write logic for field search_data29: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(15 downto 8);
           tmp_strb8 := w_hstb(15 downto 8);
@@ -3305,13 +3530,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((29)).d := (f_word_data_r((29)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((29)).d
+                := (f_search_data_r((29)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data30: The word to match.
+          -- Write logic for field search_data30: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(23 downto 16);
           tmp_strb8 := w_hstb(23 downto 16);
@@ -3319,13 +3547,16 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((30)).d := (f_word_data_r((30)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((30)).d
+                := (f_search_data_r((30)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
 
-          -- Write logic for field word_data31: The word to match.
+          -- Write logic for field search_data31: The word to match. The length
+          -- is set by `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED.
+          -- The character used to pad the unused bytes before the word is don't
+          -- care.
 
           tmp_data8 := w_hold(31 downto 24);
           tmp_strb8 := w_hstb(31 downto 24);
@@ -3333,8 +3564,8 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_data_r((31)).d := (f_word_data_r((31)).d and not tmp_strb8)
-                or tmp_data8;
+            f_search_data_r((31)).d
+                := (f_search_data_r((31)).d and not tmp_strb8) or tmp_data8;
             w_ack := true;
 
           end if;
@@ -3342,16 +3573,16 @@ begin
         when "100010" =>
           -- w_addr = 000000000000000000000000100010--
 
-          -- Write logic for block word_len_reg: block containing bits 31..0 of
-          -- register `word_len_reg` (`WORD_LEN`).
+          -- Write logic for block search_first_reg: block containing bits 31..0
+          -- of register `search_first_reg` (`SEARCH_FIRST`).
           if w_req or w_lreq then
             w_hold(31 downto 0) := w_data;
             w_hstb(31 downto 0) := w_strb;
             w_multi := '0';
           end if;
 
-          -- Write logic for field word_len: Length of the word to match,
-          -- diminished-one.
+          -- Write logic for field search_first: Index of the first valid
+          -- character in `search_data`.
 
           tmp_data5 := w_hold(4 downto 0);
           tmp_strb5 := w_hstb(4 downto 0);
@@ -3359,8 +3590,23 @@ begin
 
             -- Regular access logic. Write mode: masked.
 
-            f_word_len_r((0)).d := (f_word_len_r((0)).d and not tmp_strb5)
-                or tmp_data5;
+            f_search_first_r((0)).d
+                := (f_search_first_r((0)).d and not tmp_strb5) or tmp_data5;
+            w_ack := true;
+
+          end if;
+
+          -- Write logic for field whole_words: When set, interpunction/spacing
+          -- must exist before and after the word for it to match.
+
+          tmp_data := w_hold(8);
+          tmp_strb := w_hstb(8);
+          if w_req then
+
+            -- Regular access logic. Write mode: masked.
+
+            f_whole_words_r((0)).d := (f_whole_words_r((0)).d and not tmp_strb)
+                or tmp_data;
             w_ack := true;
 
           end if;
@@ -3588,29 +3834,43 @@ begin
       -- Assign the read outputs for field res_stats_addr.
       g_cmd_o.f_res_stats_addr_data <= f_res_stats_addr_r((0)).d;
 
-      -- Post-bus logic for field group word_data: The word to match.
+      -- Post-bus logic for field group search_data: The word to match. The
+      -- length is set by `search_first`; that is, THE WORD MUST BE
+      -- RIGHT-ALIGNED. The character used to pad the unused bytes before the
+      -- word is don't care.
       for i in 0 to 31 loop
 
-        -- Handle reset for field word_data.
+        -- Handle reset for field search_data.
         if reset = '1' then
-          f_word_data_r((i)).d := (others => '0');
-          f_word_data_r((i)).v := '0';
+          f_search_data_r((i)).d := (others => '0');
+          f_search_data_r((i)).v := '0';
         end if;
-        -- Assign the read outputs for field word_data.
-        g_cfg_o.f_word_data_data((i)) <= f_word_data_r((i)).d;
+        -- Assign the read outputs for field search_data.
+        g_cfg_o.f_search_data_data((i)) <= f_search_data_r((i)).d;
 
       end loop;
 
-      -- Post-bus logic for field word_len: Length of the word to match,
-      -- diminished-one.
+      -- Post-bus logic for field search_first: Index of the first valid
+      -- character in `search_data`.
 
-      -- Handle reset for field word_len.
+      -- Handle reset for field search_first.
       if reset = '1' then
-        f_word_len_r((0)).d := (others => '0');
-        f_word_len_r((0)).v := '0';
+        f_search_first_r((0)).d := (others => '0');
+        f_search_first_r((0)).v := '0';
       end if;
-      -- Assign the read outputs for field word_len.
-      g_cfg_o.f_word_len_data <= f_word_len_r((0)).d;
+      -- Assign the read outputs for field search_first.
+      g_cfg_o.f_search_first_data <= f_search_first_r((0)).d;
+
+      -- Post-bus logic for field whole_words: When set, interpunction/spacing
+      -- must exist before and after the word for it to match.
+
+      -- Handle reset for field whole_words.
+      if reset = '1' then
+        f_whole_words_r((0)).d := '0';
+        f_whole_words_r((0)).v := '0';
+      end if;
+      -- Assign the read outputs for field whole_words.
+      g_cfg_o.f_whole_words_data <= f_whole_words_r((0)).d;
 
       -- Post-bus logic for field min_matches: Minimum number of times that the
       -- word needs to occur in the article text for the page to be considered

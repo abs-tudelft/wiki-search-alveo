@@ -192,8 +192,10 @@ fields:
 
   - address: 104
     brief: |
-      The word to match.
-    name: word_data
+      The word to match. The length is set by `search_first`; that is, THE WORD
+      MUST BE RIGHT-ALIGNED. The character used to pad the unused bytes before
+      the word is don't care.
+    name: search_data
     bitrange: 7..0
     repeat: 32
     field-repeat: 4
@@ -202,9 +204,18 @@ fields:
 
   - address: 136
     brief: |
-      Length of the word to match, diminished-one.
-    name: word_len
+      Index of the first valid character in `search_data`.
+    name: search_first
     bitrange: 4..0
+    behavior: control
+    group: cfg
+
+  - address: 136
+    brief: |
+      When set, interpunction/spacing must exist before and after the word for
+      it to match.
+    name: whole_words
+    bitrange: 8
     behavior: control
     group: cfg
 

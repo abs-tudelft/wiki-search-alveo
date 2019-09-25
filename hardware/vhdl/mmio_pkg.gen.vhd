@@ -67,16 +67,18 @@ package mmio_pkg is
     f_num_page_matches_write_data => (others => '0'),
     f_num_page_matches_write_enable => '0'
   );
-  subtype mmio_f_word_data_data_type is std_logic_vector(7 downto 0);
-  type mmio_f_word_data_data_array is array (natural range <>) of mmio_f_word_data_data_type;
+  subtype mmio_f_search_data_data_type is std_logic_vector(7 downto 0);
+  type mmio_f_search_data_data_array is array (natural range <>) of mmio_f_search_data_data_type;
   type mmio_g_cfg_o_type is record
-    f_word_data_data : mmio_f_word_data_data_array(0 to 31);
-    f_word_len_data : std_logic_vector(4 downto 0);
+    f_search_data_data : mmio_f_search_data_data_array(0 to 31);
+    f_search_first_data : std_logic_vector(4 downto 0);
+    f_whole_words_data : std_logic;
     f_min_matches_data : std_logic_vector(15 downto 0);
   end record;
   constant MMIO_G_CFG_O_RESET : mmio_g_cfg_o_type := (
-    f_word_data_data => (others => (others => '0')),
-    f_word_len_data => (others => '0'),
+    f_search_data_data => (others => (others => '0')),
+    f_search_first_data => (others => '0'),
+    f_whole_words_data => '0',
     f_min_matches_data => (others => '0')
   );
 
@@ -136,10 +138,16 @@ package mmio_pkg is
       g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
 
       -- Interface group for:
-      --  - field group word_data: The word to match.
+      --  - field group search_data: The word to match. The length is set by
+      --    `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
+      --    character used to pad the unused bytes before the word is don't
+      --    care.
       --  - field min_matches: Minimum number of times that the word needs to
       --    occur in the article text for the page to be considered to match.
-      --  - field word_len: Length of the word to match, diminished-one.
+      --  - field search_first: Index of the first valid character in
+      --    `search_data`.
+      --  - field whole_words: When set, interpunction/spacing must exist before
+      --    and after the word for it to match.
       g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
 
       -- AXI4-lite + interrupt request bus to the master.
