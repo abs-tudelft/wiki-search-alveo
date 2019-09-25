@@ -22,6 +22,8 @@ use work.Interconnect_pkg.all;
 use work.UtilStr_pkg.all;
 use work.UtilConv_pkg.all;
 
+-- pragma simulation timeout 50 us
+
 entity SimTop_tc is
   generic (
     -- Accelerator properties
@@ -157,7 +159,6 @@ architecture Behavorial of SimTop_tc is
 
   -- Mmio signals to sink in mmio procedures
   type mmio_sink_t is record
-    clk               : std_logic;
     reset             : std_logic;
 
     wready            : std_logic;
@@ -205,30 +206,32 @@ architecture Behavorial of SimTop_tc is
     -- Wait for reset
     loop
       exit when sink.reset = '0';
-      wait until rising_edge(sink.clk);
+      wait until rising_edge(kcd_clk);
     end loop;
     -- Address write channel
     source.awaddr <= slv((REG_WIDTH/8)*idx, 32);
     source.awvalid <= '1';
     loop
-      wait until rising_edge(sink.clk);
+      wait until rising_edge(kcd_clk);
       exit when sink.awready = '1';
     end loop;
     source.awvalid <= '0';
     source.awaddr <= (others => 'U');
     -- Write channel
     source.wdata <= data;
+    source.wstrb <= (others => '1');
     source.wvalid <= '1';
     loop
-      wait until rising_edge(sink.clk);
+      wait until rising_edge(kcd_clk);
       exit when sink.wready = '1';
     end loop;
     source.wvalid <= '0';
+    source.wstrb <= (others => 'U');
     source.wdata <= (others => 'U');
     -- Write response channel.
     source.bready <= '1';
     loop
-      wait until rising_edge(sink.clk);
+      wait until rising_edge(kcd_clk);
       exit when sink.bvalid = '1';
     end loop;
     source.bready <= '0';
@@ -243,13 +246,13 @@ architecture Behavorial of SimTop_tc is
     -- Wait for reset
     loop
       exit when sink.reset = '0';
-      wait until rising_edge(sink.clk);
+      wait until rising_edge(kcd_clk);
     end loop;
     -- Address read channel
     source.araddr <= slv((REG_WIDTH/8)*idx, 32);
     source.arvalid <= '1';
     loop
-      wait until rising_edge(sink.clk);
+      wait until rising_edge(kcd_clk);
       exit when sink.arready = '1';
     end loop;
     source.arvalid <= '0';
@@ -257,7 +260,7 @@ architecture Behavorial of SimTop_tc is
     -- Read channel
     loop
       source.rready <= '1';
-      wait until rising_edge(sink.clk);
+      wait until rising_edge(kcd_clk);
       if sink.rvalid = '1' then
         data := sink.rdata;
         exit;
@@ -280,7 +283,6 @@ begin
   mmio_araddr  <= mmio_source.araddr;
   mmio_rready  <= mmio_source.rready;
 
-  mmio_sink.clk     <= kcd_clk;
   mmio_sink.reset   <= kcd_reset;
   mmio_sink.wready  <= mmio_wready;
   mmio_sink.awready <= mmio_awready;
@@ -311,11 +313,42 @@ begin
     mmio_write(REG_CONTROL, CONTROL_CLEAR, mmio_source, mmio_sink);
 
     -- 2. Write addresses of the arrow buffers in the SREC file.
+    mmio_write(10, X"00000000", mmio_source, mmio_sink); -- Pages title_offsets
+    mmio_write(11, X"00000000", mmio_source, mmio_sink);
+    mmio_write(12, X"00000040", mmio_source, mmio_sink); -- Pages title_values
+    mmio_write(13, X"00000000", mmio_source, mmio_sink);
+    mmio_write(14, X"00000080", mmio_source, mmio_sink); -- Pages text_offsets
+    mmio_write(15, X"00000000", mmio_source, mmio_sink);
+    mmio_write(16, X"000000c0", mmio_source, mmio_sink); -- Pages text_values
+    mmio_write(17, X"00000000", mmio_source, mmio_sink);
+    mmio_write(18, X"00001000", mmio_source, mmio_sink); -- Result title_offsets
+    mmio_write(19, X"00000000", mmio_source, mmio_sink);
+    mmio_write(20, X"00002000", mmio_source, mmio_sink); -- Result title_values
+    mmio_write(21, X"00000000", mmio_source, mmio_sink);
+    mmio_write(22, X"00003000", mmio_source, mmio_sink); -- Result count_values
+    mmio_write(23, X"00000000", mmio_source, mmio_sink);
+    mmio_write(24, X"00004000", mmio_source, mmio_sink); -- Stats stats_values
+    mmio_write(25, X"00000000", mmio_source, mmio_sink);
 
     -- 3. Write recordbatch bounds.
+    mmio_write(4, X"00000000", mmio_source, mmio_sink); -- Pages first index
+    mmio_write(5, X"00000003", mmio_source, mmio_sink); -- Pages last index
+    mmio_write(6, X"00000000", mmio_source, mmio_sink); -- Result first index
+    mmio_write(7, X"00000002", mmio_source, mmio_sink); -- Result last index
+    mmio_write(8, X"00000000", mmio_source, mmio_sink); -- Stats first index
+    mmio_write(9, X"00000000", mmio_source, mmio_sink); -- Stats last index
 
     -- 4. Write any kernel-specific registers.
-    -- <kernel specific registers reading/writing goes here>
+    mmio_write(26, X"00000000", mmio_source, mmio_sink); -- search data 0
+    mmio_write(27, X"00000000", mmio_source, mmio_sink); -- search data 4
+    mmio_write(28, X"00000000", mmio_source, mmio_sink); -- search data 8
+    mmio_write(29, X"00000000", mmio_source, mmio_sink); -- search data 12
+    mmio_write(30, X"00000000", mmio_source, mmio_sink); -- search data 16
+    mmio_write(31, X"00000000", mmio_source, mmio_sink); -- search data 20
+    mmio_write(32, X"00000000", mmio_source, mmio_sink); -- search data 24
+    mmio_write(33, X"65726568", mmio_source, mmio_sink); -- search data 28
+    mmio_write(34, X"0000001c", mmio_source, mmio_sink); -- search config
+    mmio_write(35, X"00000001", mmio_source, mmio_sink); -- min matches
 
     -- 5. Start the user core.
     mmio_write(REG_CONTROL, CONTROL_START, mmio_source, mmio_sink);
@@ -382,7 +415,7 @@ begin
     SEED                        => 1337,
     RANDOM_REQUEST_TIMING       => false,
     RANDOM_RESPONSE_TIMING      => false,
-    SREC_FILE                   => ""
+    SREC_FILE                   => "memory.srec"
   )
   port map (
     clk                         => bcd_clk,

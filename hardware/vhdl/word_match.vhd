@@ -206,6 +206,11 @@ architecture Implementation of word_match is
   signal match_count_ready      : std_logic;
   signal match_count_amount     : std_logic_vector(15 downto 0);
 
+  -- Command signal to the filter unit to indicate how many result records
+  -- are expected.
+  signal filter_result_valid    : std_logic;
+  signal filter_result_count    : std_logic_vector(15 downto 0);
+
 begin
 
   -- Instantiate the VHDmmio register file.
@@ -246,6 +251,8 @@ begin
       reset                     => kcd_reset,
       mmio_cmd                  => mmio_cmd,
       mmio_stat                 => mmio_stat,
+      filter_result_valid       => filter_result_valid,
+      filter_result_count       => filter_result_count,
       pages_title_cmd_valid     => pages_title_cmd_valid,
       pages_title_cmd_ready     => pages_title_cmd_ready,
       pages_title_cmd_firstIdx  => pages_title_cmd_firstIdx,
@@ -332,6 +339,54 @@ begin
       match_count_valid         => match_count_valid,
       match_count_ready         => match_count_ready,
       match_count_amount        => match_count_amount
+    );
+
+  -- Instantiate the filter and statistics-gathering engine.
+  filter_inst: entity work.word_match_filter
+    port map (
+      clk                       => kcd_clk,
+      reset                     => kcd_reset,
+      mmio_cfg                  => mmio_cfg,
+      mmio_result               => mmio_result,
+      filter_result_valid       => filter_result_valid,
+      filter_result_count       => filter_result_count,
+      pages_title_valid         => pages_title_valid,
+      pages_title_ready         => pages_title_ready,
+      pages_title_dvalid        => pages_title_dvalid,
+      pages_title_last          => pages_title_last,
+      pages_title_length        => pages_title_length,
+      pages_title_count         => pages_title_count,
+      pages_title_chars_valid   => pages_title_chars_valid,
+      pages_title_chars_ready   => pages_title_chars_ready,
+      pages_title_chars_dvalid  => pages_title_chars_dvalid,
+      pages_title_chars_last    => pages_title_chars_last,
+      pages_title_chars_data    => pages_title_chars_data,
+      pages_title_chars_count   => pages_title_chars_count,
+      match_count_valid         => match_count_valid,
+      match_count_ready         => match_count_ready,
+      match_count_amount        => match_count_amount,
+      result_title_valid        => result_title_valid,
+      result_title_ready        => result_title_ready,
+      result_title_dvalid       => result_title_dvalid,
+      result_title_last         => result_title_last,
+      result_title_length       => result_title_length,
+      result_title_count        => result_title_count,
+      result_title_chars_valid  => result_title_chars_valid,
+      result_title_chars_ready  => result_title_chars_ready,
+      result_title_chars_dvalid => result_title_chars_dvalid,
+      result_title_chars_last   => result_title_chars_last,
+      result_title_chars_data   => result_title_chars_data,
+      result_title_chars_count  => result_title_chars_count,
+      result_count_valid        => result_count_valid,
+      result_count_ready        => result_count_ready,
+      result_count_dvalid       => result_count_dvalid,
+      result_count_last         => result_count_last,
+      result_count              => result_count,
+      stats_stats_valid         => stats_stats_valid,
+      stats_stats_ready         => stats_stats_ready,
+      stats_stats_dvalid        => stats_stats_dvalid,
+      stats_stats_last          => stats_stats_last,
+      stats_stats               => stats_stats
     );
 
 end architecture;
