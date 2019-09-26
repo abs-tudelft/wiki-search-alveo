@@ -1,8 +1,8 @@
-VHDL_FILES = $(shell python3 -m vhdeps dump krnl_word_match_rtl
-               -i src
-               -i ../hardware/vhdl
-               -i ../../fletcher/hardware
-               -x ../../vhsnunzip/vhdl
+VHDL_FILES = $(shell python3 -m vhdeps dump krnl_word_match_rtl \
+               -i src \
+               -i ../hardware/vhdl \
+               -i ../../fletcher/hardware \
+               -x ../../vhsnunzip/vhdl \
                -msyn -v93 | cut -d ' ' -f 4-)
 
 VIVADO := $(XILINX_VIVADO)/bin/vivado
