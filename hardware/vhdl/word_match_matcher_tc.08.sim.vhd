@@ -165,6 +165,17 @@ begin
     b.cq_next;
     tc_check(b.cq_ready, false);
 
+    configure("here", false);
+    a.push_str("And another line is herehereherehereherehere");
+    a.transmit;
+    b.unblock;
+
+    tc_wait_for(2 us);
+
+    tc_check(b.cq_get_d_nat, 6, "count");
+    b.cq_next;
+    tc_check(b.cq_ready, false);
+
     tc_pass;
     wait;
   end process;

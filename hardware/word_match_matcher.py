@@ -139,4 +139,6 @@ check('test test 1 two three banana', 'test test 1 two three banana triangle', 1
 
 check('test', 'hello test there testest', 0)
 
+check('here', 'And another line is herehereherehereherehere', 0)
+
 #Matcher('a', whole_words=0).check('test test 1 two three banana triangle')

@@ -154,7 +154,7 @@ begin
 
           -- Shift the convolution window along with the incoming data.
           conv_win_mat(8 to 40) := conv_win_mat(0 to 32);
-          conv_win_mat(0 to 7) := X"11";
+          conv_win_mat(0 to 7) := X"FF";
 
           -- Perform the convolution for the next 8 data bytes.
           for ci in 0 to 40 loop
