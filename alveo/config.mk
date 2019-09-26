@@ -10,5 +10,5 @@ $(XCLBIN)/word_match.$(TARGET).$(DSA).xo: src/kernel.xml scripts/package_kernel.
 	mkdir -p $(XCLBIN)
 	rm -rf all-sources
 	mkdir -p all-sources
-	cat $(VHDL_FILES) | xargs cp -t all-sources
+	cp -t all-sources $(VHDL_FILES)
 	$(VIVADO) -mode batch -source scripts/gen_xo.tcl -tclargs $(XCLBIN)/word_match.$(TARGET).$(DSA).xo word_match $(TARGET) $(DSA)
