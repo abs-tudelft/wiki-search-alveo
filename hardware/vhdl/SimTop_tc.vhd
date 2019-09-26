@@ -334,7 +334,7 @@ begin
     mmio_write(4, X"00000000", mmio_source, mmio_sink); -- Pages first index
     mmio_write(5, X"00000003", mmio_source, mmio_sink); -- Pages last index
     mmio_write(6, X"00000000", mmio_source, mmio_sink); -- Result first index
-    mmio_write(7, X"00000002", mmio_source, mmio_sink); -- Result last index
+    mmio_write(7, X"00000000", mmio_source, mmio_sink); -- Result last index
     mmio_write(8, X"00000000", mmio_source, mmio_sink); -- Stats first index
     mmio_write(9, X"00000000", mmio_source, mmio_sink); -- Stats last index
 
@@ -346,7 +346,7 @@ begin
     mmio_write(30, X"00000000", mmio_source, mmio_sink); -- search data 16
     mmio_write(31, X"00000000", mmio_source, mmio_sink); -- search data 20
     mmio_write(32, X"00000000", mmio_source, mmio_sink); -- search data 24
-    mmio_write(33, X"65726568", mmio_source, mmio_sink); -- search data 28
+    mmio_write(33, X"656E696C", mmio_source, mmio_sink); -- search data 28
     mmio_write(34, X"0000001c", mmio_source, mmio_sink); -- search config
     mmio_write(35, X"00000001", mmio_source, mmio_sink); -- min matches
 

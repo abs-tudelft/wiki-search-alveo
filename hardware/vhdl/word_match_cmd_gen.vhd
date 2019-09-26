@@ -95,17 +95,16 @@ architecture Implementation of word_match_cmd_gen is
 begin
   proc: process (clk) is
 
-    -- Temporary variables.
-    variable new_busy           : std_logic;
-
     -- State variables.
-    variable busy               : std_logic;
-    variable done               : std_logic;
+    variable busy_r             : std_logic;
     variable pages_title_wait   : std_logic;
     variable pages_text_wait    : std_logic;
     variable result_title_wait  : std_logic;
     variable result_count_wait  : std_logic;
     variable stats_wait         : std_logic;
+
+    -- Temporary variables.
+    variable busy               : std_logic;
 
   begin
     if rising_edge(clk) then
@@ -153,20 +152,14 @@ begin
       end if;
 
       -- We're busy if we're waiting for anything.
-      new_busy := pages_title_wait
-               or pages_text_wait
-               or result_title_wait
-               or result_count_wait
-               or stats_wait;
-
-      if busy = '1' and new_busy = '0' then
-        done := '1';
-      end if;
-
-      busy := new_busy;
+      busy := pages_title_wait
+           or pages_text_wait
+           or result_title_wait
+           or result_count_wait
+           or stats_wait;
 
       -- Handle the start command.
-      if busy = '0' and mmio_cmd.f_start_data = '1' then
+      if busy = '0' and mmio_cmd.s_start = '1' then
 
         -- Send article title input command.
         pages_title_cmd_valid       <= '1';
@@ -225,7 +218,7 @@ begin
       -- Handle reset.
       if reset = '1' then
         busy := '0';
-        done := '0';
+        busy_r := '1';
         pages_title_wait   := '0';
         pages_text_wait    := '0';
         result_title_wait  := '0';
@@ -239,9 +232,14 @@ begin
       end if;
 
       -- Assign MMIO status register values.
-      mmio_stat.f_idle_write_data <= not busy;
-      mmio_stat.f_busy_write_data <= busy;
-      mmio_stat.f_done_write_data <= done;
+      mmio_stat.s_starting <= '0';
+      mmio_stat.s_done <= '0';
+      if busy = '1' and busy_r = '0' then
+        mmio_stat.s_starting <= '1';
+      end if;
+      if busy = '0' and busy_r = '1' then
+        mmio_stat.s_done <= '1';
+      end if;
 
       -- Assign unlock stream ready signals.
       pages_title_unl_ready   <= pages_title_wait;
@@ -249,6 +247,9 @@ begin
       result_title_unl_ready  <= result_title_wait;
       result_count_unl_ready  <= result_count_wait;
       stats_stats_unl_ready   <= stats_wait;
+
+      -- Save busy for the next cycle.
+      busy_r := busy;
 
     end if;
   end process;

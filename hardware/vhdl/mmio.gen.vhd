@@ -17,6 +17,13 @@ entity mmio is
     reset : in std_logic := '0';
 
     -- Interface group for:
+    --  - field num_page_matches: Number of pages that contain the specified
+    --    word at least as many times as requested by `min_match`.
+    --  - field num_word_matches: Number of times that the word occured in the
+    --    dataset.
+    g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
+
+    -- Interface group for:
     --  - field first_idx: First index to process in the input dataset.
     --  - field last_idx: Last index to process in the input dataset,
     --    diminished-one.
@@ -38,29 +45,14 @@ entity mmio is
     --    write this many match records; it'll just pad with empty title strings
     --    and 0 for the match count when less articles match than this value
     --    implies, and it'll void any matches it doesn't have room for.
-    --  - field start: Starts the kernel with the parameters specified in the
-    --    rest of the register file.
     --  - field text_offs_addr: Address for the compressed article data offset
     --    buffer.
     --  - field text_val_addr: Address for the compressed article data value
     --    buffer.
     --  - field title_offs_addr: Address for the article title offset buffer.
     --  - field title_val_addr: Address for the article title value buffer.
+    --  - output port for internal signal start.
     g_cmd_o : out mmio_g_cmd_o_type := MMIO_G_CMD_O_RESET;
-
-    -- Interface group for:
-    --  - field busy: Asserted high when the kernel is busy.
-    --  - field done: Asserted high along with idle when processing completes,
-    --    cleared when it is started again.
-    --  - field idle: Asserted high when the kernel is not busy.
-    g_stat_i : in mmio_g_stat_i_type := MMIO_G_STAT_I_RESET;
-
-    -- Interface group for:
-    --  - field num_page_matches: Number of pages that contain the specified
-    --    word at least as many times as requested by `min_match`.
-    --  - field num_word_matches: Number of times that the word occured in the
-    --    dataset.
-    g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
 
     -- Interface group for:
     --  - field group search_data: The word to match. The length is set by
@@ -73,6 +65,11 @@ entity mmio is
     --  - field whole_words: When set, interpunction/spacing must exist before
     --    and after the word for it to match.
     g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
+
+    -- Interface group for:
+    --  - strobe port for internal signal done.
+    --  - strobe port for internal signal starting.
+    g_stat_i : in mmio_g_stat_i_type := MMIO_G_STAT_I_RESET;
 
     -- AXI4-lite + interrupt request bus to the master.
     mmio_awvalid : in  std_logic := '0';
@@ -283,12 +280,10 @@ begin
     -- Private declarations for field idle: Asserted high when the kernel is not
     -- busy.
     type f_idle_r_type is record
-      d : std_logic;
-      v : std_logic;
+      idle : std_logic;
     end record;
     constant F_IDLE_R_RESET : f_idle_r_type := (
-      d => '0',
-      v => '0'
+      idle => '0'
     );
     type f_idle_r_array is array (natural range <>) of f_idle_r_type;
     variable f_idle_r : f_idle_r_array(0 to 0) := (others => F_IDLE_R_RESET);
@@ -296,12 +291,10 @@ begin
     -- Private declarations for field busy: Asserted high when the kernel is
     -- busy.
     type f_busy_r_type is record
-      d : std_logic;
-      v : std_logic;
+      busy : std_logic;
     end record;
     constant F_BUSY_R_RESET : f_busy_r_type := (
-      d => '0',
-      v => '0'
+      busy => '0'
     );
     type f_busy_r_array is array (natural range <>) of f_busy_r_type;
     variable f_busy_r : f_busy_r_array(0 to 0) := (others => F_BUSY_R_RESET);
@@ -309,12 +302,10 @@ begin
     -- Private declarations for field done: Asserted high along with idle when
     -- processing completes, cleared when it is started again.
     type f_done_r_type is record
-      d : std_logic;
-      v : std_logic;
+      done_flag : std_logic;
     end record;
     constant F_DONE_R_RESET : f_done_r_type := (
-      d => '0',
-      v => '0'
+      done_flag => '0'
     );
     type f_done_r_array is array (natural range <>) of f_done_r_type;
     variable f_done_r : f_done_r_array(0 to 0) := (others => F_DONE_R_RESET);
@@ -622,6 +613,18 @@ begin
     variable tmp_data64  : std_logic_vector(63 downto 0);
     variable tmp_strb64  : std_logic_vector(63 downto 0);
 
+    -- Private declarations for internal signal start.
+    variable intsigr_start : std_logic := '0';
+    variable intsigs_start : std_logic := '0';
+
+    -- Private declarations for internal signal starting.
+    variable intsigr_starting : std_logic := '0';
+    variable intsigs_starting : std_logic := '0';
+
+    -- Private declarations for internal signal done.
+    variable intsigr_done : std_logic := '0';
+    variable intsigs_done : std_logic := '0';
+
   begin
     if rising_edge(clk) then
 
@@ -672,6 +675,16 @@ begin
         arl.addr  := mmio_araddr;
         arl.prot  := mmio_arprot;
       end if;
+
+      -------------------------------------------------------------------------
+      -- Connect internal signal input/strobe ports
+      -------------------------------------------------------------------------
+
+      -- Logic for strobe port for internal signal starting.
+      intsigs_starting := intsigs_starting or g_stat_i.s_starting;
+
+      -- Logic for strobe port for internal signal done.
+      intsigs_done := intsigs_done or g_stat_i.s_done;
 
       -------------------------------------------------------------------------
       -- Handle interrupts
@@ -725,22 +738,28 @@ begin
       -- Pre-bus logic for field idle: Asserted high when the kernel is not
       -- busy.
 
-      -- Handle hardware write for field idle: status.
-      f_idle_r((0)).d := g_stat_i.f_idle_write_data;
-      f_idle_r((0)).v := '1';
+      if intsigr_starting = '1' then
+        f_idle_r((0)).idle := '0';
+      end if;
+      if intsigr_done = '1' then
+        f_idle_r((0)).idle := '1';
+      end if;
 
       -- Pre-bus logic for field busy: Asserted high when the kernel is busy.
 
-      -- Handle hardware write for field busy: status.
-      f_busy_r((0)).d := g_stat_i.f_busy_write_data;
-      f_busy_r((0)).v := '1';
+      if intsigr_starting = '1' then
+        f_busy_r((0)).busy := '1';
+      end if;
+      if intsigr_done = '1' then
+        f_busy_r((0)).busy := '0';
+      end if;
 
       -- Pre-bus logic for field done: Asserted high along with idle when
       -- processing completes, cleared when it is started again.
 
-      -- Handle hardware write for field done: status.
-      f_done_r((0)).d := g_stat_i.f_done_write_data;
-      f_done_r((0)).v := '1';
+      if intsigr_done = '1' then
+        f_done_r((0)).done_flag := '1';
+      end if;
 
       -- Pre-bus logic for field num_word_matches: Number of times that the word
       -- occured in the dataset.
@@ -785,8 +804,8 @@ begin
           end if;
           if r_req then
 
-            -- Regular access logic. Read mode: enabled.
-            tmp_data := f_idle_r((0)).d;
+            -- Regular access logic.
+            tmp_data := f_idle_r((0)).idle;
             r_ack := true;
 
           end if;
@@ -801,8 +820,8 @@ begin
           end if;
           if r_req then
 
-            -- Regular access logic. Read mode: enabled.
-            tmp_data := f_busy_r((0)).d;
+            -- Regular access logic.
+            tmp_data := f_busy_r((0)).busy;
             r_ack := true;
 
           end if;
@@ -818,8 +837,8 @@ begin
           end if;
           if r_req then
 
-            -- Regular access logic. Read mode: enabled.
-            tmp_data := f_done_r((0)).d;
+            -- Regular access logic.
+            tmp_data := f_done_r((0)).done_flag;
             r_ack := true;
 
           end if;
@@ -3653,8 +3672,28 @@ begin
         f_start_r((0)).v := '1';
         f_start_r((0)).inval := '0';
       end if;
-      -- Assign the read outputs for field start.
-      g_cmd_o.f_start_data <= f_start_r((0)).d;
+      -- Assign the internal signal for field start.
+      intsigs_start := f_start_r((0)).d;
+
+      -- Post-bus logic for field idle: Asserted high when the kernel is not
+      -- busy.
+
+      if reset = '1' then
+        f_idle_r((0)).idle := '1';
+      end if;
+
+      -- Post-bus logic for field busy: Asserted high when the kernel is busy.
+
+      if reset = '1' then
+        f_busy_r((0)).busy := '0';
+      end if;
+
+      -- Post-bus logic for field done: Asserted high along with idle when
+      -- processing completes, cleared when it is started again.
+
+      if reset = '1' then
+        f_done_r((0)).done_flag := '0';
+      end if;
 
       -- Post-bus logic for field num_word_matches: Number of times that the
       -- word occured in the dataset.
@@ -3939,6 +3978,34 @@ begin
       bus_v.aw.ready := not awl.valid;
       bus_v.w.ready := not wl.valid;
       bus_v.ar.ready := not arl.valid;
+
+      -------------------------------------------------------------------------
+      -- Internal signal logic
+      -------------------------------------------------------------------------
+
+      -- Logic for internal signal start.
+      intsigr_start := intsigs_start;
+      intsigs_start := '0';
+      if reset = '1' then
+        intsigr_start := '0';
+      end if;
+
+      -- Logic for internal signal starting.
+      intsigr_starting := intsigs_starting;
+      intsigs_starting := '0';
+      if reset = '1' then
+        intsigr_starting := '0';
+      end if;
+
+      -- Logic for internal signal done.
+      intsigr_done := intsigs_done;
+      intsigs_done := '0';
+      if reset = '1' then
+        intsigr_done := '0';
+      end if;
+
+      -- Logic for output port for internal signal start.
+      g_cmd_o.s_start <= intsigr_start;
 
       -------------------------------------------------------------------------
       -- Handle AXI4-lite bus reset

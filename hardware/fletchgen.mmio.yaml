@@ -13,15 +13,28 @@ metadata:
     matches.
 
 features:
-  bus-width:    32
-  optimize:     yes
+  bus-width: 32
+  optimize: yes
 
 entity:
-  bus-flatten:  yes
-  bus-prefix:   mmio_
+  bus-flatten: yes
+  bus-prefix: mmio_
 
 interface:
-  flatten:      record
+  flatten: record
+
+internal-io:
+  - internal: start
+    group: cmd
+    direction: output
+
+  - internal: starting
+    group: stat
+    direction: strobe
+
+  - internal: done
+    group: stat
+    direction: strobe
 
 fields:
   - address: 0
@@ -31,8 +44,8 @@ fields:
     brief: |
       Starts the kernel with the parameters specified in the rest of the
       register file.
-    behavior: strobe
-    group: cmd
+    behavior: internal-strobe
+    internal: start
 
   - address: 4
     register-name: status
@@ -40,8 +53,25 @@ fields:
     name: idle
     brief: |
       Asserted high when the kernel is not busy.
-    behavior: status
-    group: stat
+    behavior: custom
+    interfaces:
+      - monitor: starting
+      - monitor: done
+      - state: idle
+    pre-access: |
+      if $s.starting$ = '1' then
+        $s.idle$ := '0';
+      end if;
+      if $s.done$ = '1' then
+        $s.idle$ := '1';
+      end if;
+    read: |
+      $data$ := $s.idle$;
+      $ack$ := true;
+    post-access: |
+      if reset = '1' then
+        $s.idle$ := '1';
+      end if;
 
   - address: 4
     register-name: status
@@ -49,8 +79,25 @@ fields:
     name: busy
     brief: |
       Asserted high when the kernel is busy.
-    behavior: status
-    group: stat
+    behavior: custom
+    interfaces:
+      - monitor: starting
+      - monitor: done
+      - state: busy
+    pre-access: |
+      if $s.starting$ = '1' then
+        $s.busy$ := '1';
+      end if;
+      if $s.done$ = '1' then
+        $s.busy$ := '0';
+      end if;
+    read: |
+      $data$ := $s.busy$;
+      $ack$ := true;
+    post-access: |
+      if reset = '1' then
+        $s.busy$ := '0';
+      end if;
 
   - address: 4
     register-name: status
@@ -59,8 +106,21 @@ fields:
     brief: |
       Asserted high along with idle when processing completes, cleared when it
       is started again.
-    behavior: status
-    group: stat
+    behavior: custom
+    interfaces:
+      - monitor: done
+      - state: done_flag
+    pre-access: |
+      if $s.done$ = '1' then
+        $s.done_flag$ := '1';
+      end if;
+    read: |
+      $data$ := $s.done_flag$;
+      $ack$ := true;
+    post-access: |
+      if reset = '1' then
+        $s.done_flag$ := '0';
+      end if;
 
   - address: 8
     name: num_word_matches
