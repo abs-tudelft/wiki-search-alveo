@@ -1,0 +1,335 @@
+metadata:
+  name: mmio
+  brief: MMIO configuration for word match demo, to be used with SDAccel.
+  doc: |
+    The word match demo kernel takes a record batch consisting of
+    Wikipedia articles (or any other kind of titled text for each row), and
+    searches them for a runtime-configurable word. The article text itself
+    should be compressed with Snappy raw format to save space and bandwidth,
+    and to make the demo more interesting. The kernel returns a record batch
+    consisting of the title string and match count for the first N articles
+    that match the word at least M times, returns the total number of articles
+    that matched at least M times, and returns the total number of word
+    matches.
+
+features:
+  bus-width: 32
+  optimize: yes
+
+entity:
+  bus-flatten: yes
+  bus-prefix: mmio_
+
+interface:
+  flatten: record
+
+internal-io:
+  - internal: start
+    group: cmd
+    direction: output
+
+  - internal: starting
+    group: stat
+    direction: strobe
+
+  - internal: done
+    group: stat
+    direction: strobe
+
+  - internal: interrupt
+    direction: output
+
+fields:
+  - address: 0x00
+    register-name: ctrl
+    register-brief: SDAccel Control Register.
+    register-doc: Controls and provides kernel status.
+    subfields:
+
+      - bitrange: 0
+        name: start
+        brief: start signal.
+        doc: |
+          Asserted by the host application when kernel can start processing data.
+          Cleared by the kernel when it finishes executing.
+        behavior: custom
+        interfaces:
+          - strobe: start
+          - monitor: done
+          - state: busy
+        pre-access: |
+          if $s.done$ = '1' then
+            $s.busy$ := '0';
+          end if;
+        read: |
+          $data$ := $s.busy$;
+          $ack$ := true;
+        write: |
+          if $data$ = '1' then
+            $s.busy$ := '1';
+            $s.start$ := '1';
+          end if;
+          $ack$ := true;
+        post-access: |
+          if reset = '1' then
+            $s.busy$ := '0';
+          end if;
+
+      - bitrange: 1
+        name: done
+        brief: done signal.
+        doc: |
+          Asserted by the kernel when it has completed its operation. Cleared
+          on read.
+        behavior: custom
+        interfaces:
+          - monitor: done
+          - state: done_reg
+        read-volatile: yes
+        pre-access: |
+          if $s.done$ = '1' then
+            $s.done_reg$ := '1';
+          end if;
+        read: |
+          $data$ := $s.done_reg$;
+          $ack$ := true;
+          $s.done_reg$ := '0';
+        post-access: |
+          if reset = '1' then
+            $s.done_reg$ := '0';
+          end if;
+
+      - bitrange: 2
+        name: idle
+        brief: idle signal.
+        doc: |
+          Asserted by this signal when it is not processing any data. The
+          transition from Low to High occurs synchronously with the assertion
+          of the done signal.
+        behavior: custom
+        interfaces:
+          - monitor: starting
+          - monitor: done
+          - state: busy
+        pre-access: |
+          if $s.starting$ = '1' then
+            $s.busy$ := '1';
+          end if;
+          if $s.done$ = '1' then
+            $s.busy$ := '0';
+          end if;
+        read: |
+          $data$ := $s.busy$;
+          $ack$ := true;
+        post-access: |
+          if reset = '1' then
+            $s.busy$ := '0';
+          end if;
+
+  - address: 0x04
+    register-name: gier_reg
+    register-brief: SDAccel Global Interrupt Enable Register.
+
+    bitrange: 0
+    name: gier
+    brief: global interrupt enable register.
+    doc: Used to enable interrupt to the host.
+    behavior: internal-control
+    internal: gier
+
+  - address: 0x08
+    register-name: iier
+    register-brief: SDAccel IP Interrupt Enable Register.
+    register-doc: |
+      Used to control which IP generated signal is used to generate an
+      interrupt.
+
+    bitrange: 0
+    name: iier_done
+    brief: selects whether kernel completion triggers an interrupt.
+    behavior: internal-control
+    internal: iier_done
+
+  - address: 0x0C
+    register-name: iisr
+    register-brief: SDAccel IP Interrupt Status Register.
+    register-doc: |
+      Provides interrupt status.
+
+    bitrange: 0
+    name: iisr_done
+    brief: interrupt flag for kernel completion.
+    doc: |
+      Asserted when the kernel completes while `iier.done` is asserted.
+      Toggles when a written high.
+
+    behavior: custom
+    interfaces:
+      - monitor: gier
+      - monitor: iier_done
+      - monitor: done
+      - strobe: interrupt
+      - state: flag
+    pre-access: |
+      if $s.iier_done$ = '1' and $s.done$ = '1' then
+        $s.flag$ := '1';
+      end if;
+      if $s.flag$ = '1' and $s.iier_done$ = '1' then
+        $s.interrupt$ := '1';
+      end if;
+    read: |
+      $data$ := $s.flag$;
+      $ack$ := true;
+    write: |
+      $s.flag$ := $s.flag$ xor $data$;
+      $ack$ := true;
+    post-access: |
+      if reset = '1' then
+        $s.flag$ := '0';
+      end if;
+
+  - address: 0x10
+    brief: |
+      Address for the article title offset buffer.
+    name: title_offs_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x18
+    brief: |
+      Address for the article title value buffer.
+    name: title_val_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x20
+    brief: |
+      Address for the compressed article data offset buffer.
+    name: text_offs_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x28
+    brief: |
+      Address for the compressed article data value buffer.
+    name: text_val_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x30
+    brief: |
+      First index to process in the input dataset.
+    name: first_idx
+    behavior: control
+    group: cmd
+
+  - address: 0x34
+    brief: |
+      Last index to process in the input dataset, diminished-one.
+    name: last_idx
+    behavior: control
+    group: cmd
+
+  - address: 0x38
+    brief: |
+      Address for the matched article title offset buffer.
+    name: res_title_offs_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x40
+    brief: |
+      Address for the matched article title value buffer.
+    name: res_title_val_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x48
+    brief: |
+      Address for the match count value buffer.
+    name: res_match_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x50
+    brief: |
+      Address for the 64-bit result "buffer".
+    name: res_stats_addr
+    bitrange: 63..0
+    behavior: control
+    group: cmd
+
+  - address: 0x58
+    brief: |
+      Number of matches to return. The kernel will always write this many match
+      records; it'll just pad with empty title strings and 0 for the match
+      count when less articles match than this value implies, and it'll void
+      any matches it doesn't have room for.
+    name: result_size
+    behavior: control
+    group: cmd
+
+  - address: 0x5C
+    register-name: search_cfg
+    register-brief: configures how the search is performed.
+    group: cfg
+    behavior: control
+    subfields:
+
+      - bitrange: 4..0
+        name: search_first
+        brief: Index of the first valid character in `search_data`.
+
+      - bitrange: 8
+        name: whole_words
+        brief: selects between whole-words and regular pattern matching.
+        doc: |
+          When set, interpunction/spacing must exist before and after the word for
+          it to match.
+
+      - bitrange: 31..16
+        name: min_matches
+        brief: |
+          Minimum number of times that the word needs to occur in the article text
+          for the page to be considered to match.
+
+  - address: 0x60
+    brief: |
+      The word to match. The length is set by `search_first`; that is, THE WORD
+      MUST BE RIGHT-ALIGNED. The character used to pad the unused bytes before
+      the word is don't care.
+    name: search_data
+    bitrange: 7..0
+    repeat: 32
+    field-repeat: 4
+    behavior: control
+    group: cfg
+
+  - address: 0x80
+    name: deadcode
+    brief: magic number used to test MMIO access.
+    doc: Always reads as 0xDEADC0DE.
+    behavior: constant
+    value: 0xDEADC0DE
+
+  - address: 0x84
+    name: num_word_matches
+    brief: |
+      Number of times that the word occured in the dataset.
+    behavior: latching
+    group: result
+
+  - address: 0x88
+    name: num_page_matches
+    brief: |
+      Number of pages that contain the specified word at least as many times as
+      requested by `min_match`.
+    behavior: latching
+    group: result
