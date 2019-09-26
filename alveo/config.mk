@@ -1,4 +1,4 @@
-VHDL_FILES = $(shell vhdeps dump krnl_word_match_rtl
+VHDL_FILES = $(shell python3 -m vhdeps dump krnl_word_match_rtl
                -i src
                -i ../hardware/vhdl
                -i ../../fletcher/hardware
