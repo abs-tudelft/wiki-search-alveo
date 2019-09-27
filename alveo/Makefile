@@ -53,6 +53,13 @@ LDFLAGS += $(xcl2_LDFLAGS)
 HOST_SRCS += $(xcl2_SRCS)
 include config.mk
 
+#Include arrow
+arrow_LDFLAGS=$(shell pkg-config --libs arrow)
+arrow_CXXFLAGS=$(shell pkg-config --cflags arrow) -D_GLIBCXX_USE_CXX11_ABI=0
+
+CXXFLAGS += $(arrow_CXXFLAGS)
+LDFLAGS += $(arrow_LDFLAGS)
+
 CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++14
 LDFLAGS += $(opencl_LDFLAGS)
 
