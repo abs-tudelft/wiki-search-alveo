@@ -67,10 +67,10 @@ HOST_SRCS += src/host.cpp
 
 # Host compiler global settings
 CXXFLAGS += -fmessage-length=0
-LDFLAGS += -lrt -lstdc++ 
+LDFLAGS += -lrt -lstdc++
 
 # Kernel compiler global settings
-CLFLAGS += -t $(TARGET) --platform $(DEVICE) --save-temps 
+CLFLAGS += -t $(TARGET) --platform $(DEVICE) --save-temps
 
 
 EXECUTABLE = host
@@ -95,6 +95,7 @@ build: $(BINARY_CONTAINERS)
 # Building kernel
 $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin: $(BINARY_CONTAINER_word_match_OBJS)
 	mkdir -p $(XCLBIN)
+	# TODO(mb): hw_emu target -g flag for traces
 	$(XOCC) $(CLFLAGS) $(LDCLFLAGS) -lo $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(DSA).xo
 
 # Building Host
@@ -120,11 +121,11 @@ endif
 
 # Cleaning stuff
 clean:
-	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*sw_emu*,*hw_emu*} 
-	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv 
+	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*sw_emu*,*hw_emu*}
+	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv
 	-$(RMDIR) src/*.ll _xocc_* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb
 
 cleanall: clean
 	-$(RMDIR) $(XCLBIN)
 	-$(RMDIR) _x.*
-	-$(RMDIR) ./tmp_kernel_pack* ./packaged_kernel* 
+	-$(RMDIR) ./tmp_kernel_pack* ./packaged_kernel*
