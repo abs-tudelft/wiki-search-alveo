@@ -52,20 +52,20 @@ int main(int argc, char **argv) {
     status = arrow::io::ReadableFile::Open(recordbatchFile, &file);
     status = arrow::ipc::RecordBatchFileReader::Open(file, &reader);
 
-    std::cout << reader->num_record_batches() << std::endl;
+    //std::cout << reader->num_record_batches() << std::endl;
     status = reader->ReadRecordBatch(0, &batch);
-    std::cout << batch->num_rows() << std::endl;
-    std::cout << reader->schema()->ToString() << std::endl;
+    //std::cout << batch->num_rows() << std::endl;
+    //std::cout << reader->schema()->ToString() << std::endl;
 
     std::shared_ptr<arrow::ArrayData> titleData = batch->column_data(0);
     std::shared_ptr<arrow::ArrayData> textData = batch->column_data(1);
 
-    std::cout << titleData->length << std::endl;
-    std::cout << textData->length << std::endl;
+    //std::cout << titleData->length << std::endl;
+    //std::cout << textData->length << std::endl;
 
     std::cout << titleData->buffers.size() << std::endl;
- //   std::cout << (char*)(titleData->buffers[2]->data()) << std::endl;
- //   std::cout << (char*)(textData->buffers[2]->data()) << std::endl;
+    //std::cout << (char*)(titleData->buffers[2]->data()) << std::endl;
+    //std::cout << (char*)(textData->buffers[2]->data()) << std::endl;
 
     cl_int err;
 
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
     int dummy = 0;
 
     int first_idx = 0;
-    int last_idx = 1; // TODO
+    int last_idx = batch->num_rows();
 
     //OPENCL HOST CODE AREA START
     //Create Program and Kernel
@@ -91,36 +91,38 @@ int main(int argc, char **argv) {
     devices.resize(1);
     OCL_CHECK(err, cl::Program program(context, devices, bins, NULL, &err));
     
-    #if 0
     OCL_CHECK(err, cl::Kernel krnl_word_match(program, "krnl_word_match_rtl", &err));
+
+    //std::cout << titleData->buffers[1]->size() << std::endl;
+    //printf("0x%016llX\n", titleData->buffers[1]->data());
 
     // Allocate input buffers.
     OCL_CHECK(err, cl::Buffer buffer_title_offs(
         context,
         CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
         titleData->buffers[1]->size(),
-        titleData->buffers[1]->mutable_data(),
+        (void*)titleData->buffers[1]->data(),
         &err));
 
     OCL_CHECK(err, cl::Buffer buffer_title_val(
         context,
         CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
         titleData->buffers[2]->size(),
-        titleData->buffers[2]->mutable_data(),
+        (void*)titleData->buffers[2]->data(),
         &err));
 
     OCL_CHECK(err, cl::Buffer buffer_text_offs(
         context,
         CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
         textData->buffers[1]->size(),
-        textData->buffers[1]->mutable_data(),
+        (void*)textData->buffers[1]->data(),
         &err));
 
     OCL_CHECK(err, cl::Buffer buffer_text_val(
         context,
         CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
         textData->buffers[2]->size(),
-        textData->buffers[2]->mutable_data(),
+        (void*)textData->buffers[2]->data(),
         &err));
 
     OCL_CHECK(err, err = krnl_word_match.setArg(0, buffer_title_offs));
@@ -168,8 +170,8 @@ int main(int argc, char **argv) {
     OCL_CHECK(err, err = krnl_word_match.setArg(10, buffer_res_stats));
 
     // Configure the search string.
-    std::string pattern = "April";
-    bool whole_words = true;
+    std::string pattern = "here";
+    bool whole_words = false;
     int min_matches = 1;
 
     uint32_t pattern_data[8];
@@ -213,8 +215,6 @@ int main(int argc, char **argv) {
 
     // Compare the results of the Device to the simulation
     printf("res_stats: 0x%016llX\n", res_stats);
-
-    #endif
 
     return EXIT_SUCCESS;
 }
