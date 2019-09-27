@@ -22,10 +22,10 @@
       <arg name="result_size"    addressQualifier="0" id="9"  port="s_axi_control" size="0x4" offset="0x58" hostOffset="0x0" hostSize="0x4" type="int"/>
 
       <!-- Pointer for statistics output -->
-      <arg name="res_stats"      addressQualifier="1" id="10" port="m_axi"         size="0x8" offset="0x38" hostOffset="0x0" hostSize="0x8" type="int*"/>
+      <arg name="res_stats"      addressQualifier="1" id="10" port="m_axi"         size="0x8" offset="0x50" hostOffset="0x0" hostSize="0x8" type="int*"/>
 
       <!-- Search configuration -->
-      <arg name="config"         addressQualifier="0" id="11" port="s_axi_control" size="0x4" offset="0x5C" hostOffset="0x0" hostSize="0x4" type="unsigned int"/>
+      <arg name="search_cfg"     addressQualifier="0" id="11" port="s_axi_control" size="0x4" offset="0x5C" hostOffset="0x0" hostSize="0x4" type="unsigned int"/>
       <arg name="pattern_0"      addressQualifier="0" id="12" port="s_axi_control" size="0x4" offset="0x60" hostOffset="0x0" hostSize="0x4" type="unsigned int"/>
       <arg name="pattern_1"      addressQualifier="0" id="13" port="s_axi_control" size="0x4" offset="0x64" hostOffset="0x0" hostSize="0x4" type="unsigned int"/>
       <arg name="pattern_2"      addressQualifier="0" id="14" port="s_axi_control" size="0x4" offset="0x68" hostOffset="0x0" hostSize="0x4" type="unsigned int"/>

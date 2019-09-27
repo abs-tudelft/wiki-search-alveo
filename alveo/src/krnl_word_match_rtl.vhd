@@ -104,7 +104,7 @@ begin
   rst_reg: process (ap_clk) is
   begin
     if rising_edge(ap_clk) then
-      ap_rst <= ap_rst_n;
+      ap_rst <= not ap_rst_n;
     end if;
   end process;
 
@@ -159,7 +159,7 @@ begin
       s_axi_bresp         => s_axi_control_BRESP,
       s_axi_arvalid       => s_axi_control_ARVALID,
       s_axi_arready       => s_axi_control_ARREADY,
-      s_axi_araddr        => s_axi_control_ARADDR,
+      s_axi_araddr        => s_axi_control_ARADDR32,
       s_axi_rvalid        => s_axi_control_RVALID,
       s_axi_rready        => s_axi_control_RREADY,
       s_axi_rdata         => s_axi_control_RDATA,
