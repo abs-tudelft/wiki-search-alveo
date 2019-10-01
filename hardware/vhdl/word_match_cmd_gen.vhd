@@ -218,7 +218,7 @@ begin
       -- Handle reset.
       if reset = '1' then
         busy := '0';
-        busy_r := '1';
+        busy_r := '0';
         pages_title_wait   := '0';
         pages_text_wait    := '0';
         result_title_wait  := '0';
