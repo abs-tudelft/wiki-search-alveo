@@ -93,7 +93,9 @@ architecture Behavorial of SimTop_tc is
       mmio_rvalid               : out std_logic;
       mmio_rready               : in  std_logic;
       mmio_rdata                : out std_logic_vector(31 downto 0);
-      mmio_rresp                : out std_logic_vector(1 downto 0)
+      mmio_rresp                : out std_logic_vector(1 downto 0);
+
+      write_busy                : in  std_logic := '0'
     );
   end component;
   -----------------------------------------------------------------------------

@@ -45,7 +45,8 @@ entity Mantle is
     wr_mst_wdat_ready  : in  std_logic;
     wr_mst_wdat_data   : out std_logic_vector(511 downto 0);
     wr_mst_wdat_strobe : out std_logic_vector(63 downto 0);
-    wr_mst_wdat_last   : out std_logic
+    wr_mst_wdat_last   : out std_logic;
+    write_busy         : in  std_logic := '0'
   );
 end entity;
 architecture Implementation of Mantle is
@@ -330,7 +331,8 @@ architecture Implementation of Mantle is
       Stats_stats_cmd_tag       : out std_logic_vector(0 downto 0);
       Stats_stats_unl_valid     : in  std_logic;
       Stats_stats_unl_ready     : out std_logic;
-      Stats_stats_unl_tag       : in  std_logic_vector(0 downto 0)
+      Stats_stats_unl_tag       : in  std_logic_vector(0 downto 0);
+      write_busy                : in  std_logic
     );
   end component;
   signal Pages_inst_Pages_title_valid        : std_logic;
@@ -746,7 +748,8 @@ begin
       Stats_stats_cmd_tag       => word_match_inst_Stats_stats_cmd_tag,
       Stats_stats_unl_valid     => Stats_inst_Stats_stats_unl_valid,
       Stats_stats_unl_ready     => Stats_inst_Stats_stats_unl_ready,
-      Stats_stats_unl_tag       => Stats_inst_Stats_stats_unl_tag
+      Stats_stats_unl_tag       => Stats_inst_Stats_stats_unl_tag,
+      write_busy                => write_busy
     );
   BusReadArbiterVec_inst : BusReadArbiterVec
     generic map (

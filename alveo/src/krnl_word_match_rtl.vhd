@@ -99,6 +99,8 @@ architecture Behavorial of krnl_word_match_rtl is
   signal ap_rst                 : std_logic;
   signal s_axi_control_AWADDR32 : std_logic_vector(31 downto 0);
   signal s_axi_control_ARADDR32 : std_logic_vector(31 downto 0);
+  signal m_axi_AWVALID_int      : std_logic;
+  signal write_busy             : std_logic;
 begin
 
   rst_reg: process (ap_clk) is
@@ -137,7 +139,7 @@ begin
       m_axi_rlast         => m_axi_RLAST,
       m_axi_rvalid        => m_axi_RVALID,
       m_axi_rready        => m_axi_RREADY,
-      m_axi_awvalid       => m_axi_AWVALID,
+      m_axi_awvalid       => m_axi_AWVALID_int,
       m_axi_awready       => m_axi_AWREADY,
       m_axi_awaddr        => m_axi_AWADDR,
       m_axi_awlen         => m_axi_AWLEN,
@@ -163,7 +165,8 @@ begin
       s_axi_rvalid        => s_axi_control_RVALID,
       s_axi_rready        => s_axi_control_RREADY,
       s_axi_rdata         => s_axi_control_RDATA,
-      s_axi_rresp         => s_axi_control_RRESP
+      s_axi_rresp         => s_axi_control_RRESP,
+      write_busy          => write_busy
     );
 
   m_axi_AWID      <= (others => '0');
@@ -181,5 +184,25 @@ begin
   m_axi_ARQOS     <= "0000";
   m_axi_ARREGION  <= "0000";
   m_axi_BREADY    <= '1';
+
+  m_axi_AWVALID <= m_axi_AWVALID_int;
+
+  reg_proc: process (ap_clk) is
+    variable outstanding  : unsigned(9 downto 0);
+  begin
+    if rising_edge(ap_clk) then
+      write_busy <= m_axi_AWVALID_int or not outstanding(9);
+      if m_axi_AWVALID_int = '1' and m_axi_AWREADY = '1' then
+        outstanding := outstanding + 1;
+      end if;
+      if m_axi_BVALID = '1' then
+        outstanding := outstanding - 1;
+      end if;
+      if ap_rst = '1' then
+        outstanding := (others => '1');
+        write_busy <= '0';
+      end if;
+    end if;
+  end process;
  
 end architecture;

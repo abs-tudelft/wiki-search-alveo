@@ -112,7 +112,9 @@ entity AxiTop is
     s_axi_rvalid                : out std_logic;
     s_axi_rready                : in std_logic;
     s_axi_rdata                 : out std_logic_vector(MMIO_DATA_WIDTH-1 downto 0);
-    s_axi_rresp                 : out std_logic_vector(1 downto 0)
+    s_axi_rresp                 : out std_logic_vector(1 downto 0);
+
+    write_busy                  : in  std_logic := '0'
   );
 end AxiTop;
 
@@ -164,7 +166,8 @@ architecture Behavorial of AxiTop is
       mmio_rvalid               : out std_logic;
       mmio_rready               : in  std_logic;
       mmio_rdata                : out std_logic_vector(31 downto 0);
-      mmio_rresp                : out std_logic_vector(1 downto 0)
+      mmio_rresp                : out std_logic_vector(1 downto 0);
+      write_busy                : in  std_logic := '0'
     );
   end component;
   
@@ -242,7 +245,8 @@ begin
       mmio_rvalid               => s_axi_rvalid,
       mmio_rready               => s_axi_rready,
       mmio_rdata                => s_axi_rdata,
-      mmio_rresp                => s_axi_rresp
+      mmio_rresp                => s_axi_rresp,
+      write_busy                => write_busy
     );
 
   -----------------------------------------------------------------------------

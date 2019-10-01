@@ -180,7 +180,14 @@ entity word_match is
     -- Unlock stream.
     stats_stats_unl_valid     : in  std_logic;
     stats_stats_unl_ready     : out std_logic;
-    stats_stats_unl_tag       : in  std_logic_vector(0 downto 0)
+    stats_stats_unl_tag       : in  std_logic_vector(0 downto 0);
+
+    ---------------------------------------------------------------------------
+    -- Memory bus status
+    ---------------------------------------------------------------------------
+    -- Whether a write transaction is currently in progress. Blocks the
+    -- signalling of done.
+    write_busy                : in  std_logic
 
   );
 end entity;
@@ -297,7 +304,8 @@ begin
       stats_stats_cmd_tag       => stats_stats_cmd_tag,
       stats_stats_unl_valid     => stats_stats_unl_valid,
       stats_stats_unl_ready     => stats_stats_unl_ready,
-      stats_stats_unl_tag       => stats_stats_unl_tag
+      stats_stats_unl_tag       => stats_stats_unl_tag,
+      write_busy                => write_busy
     );
 
   -- Void the article text length stream; we don't need it.

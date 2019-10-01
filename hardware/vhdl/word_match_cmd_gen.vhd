@@ -86,7 +86,10 @@ entity word_match_cmd_gen is
     -- Statistics data output unlock stream.
     stats_stats_unl_valid     : in  std_logic;
     stats_stats_unl_ready     : out std_logic;
-    stats_stats_unl_tag       : in  std_logic_vector(0 downto 0)
+    stats_stats_unl_tag       : in  std_logic_vector(0 downto 0);
+
+    -- Write channel busy signal.
+    write_busy                : in  std_logic
 
   );
 end entity;
@@ -102,6 +105,7 @@ begin
     variable result_title_wait  : std_logic;
     variable result_count_wait  : std_logic;
     variable stats_wait         : std_logic;
+    variable timer              : unsigned(4 downto 0);
 
     -- Temporary variables.
     variable busy               : std_logic;
@@ -151,12 +155,27 @@ begin
         stats_wait := '0';
       end if;
 
-      -- We're busy if we're waiting for anything.
-      busy := pages_title_wait
-           or pages_text_wait
-           or result_title_wait
-           or result_count_wait
-           or stats_wait;
+      -- We're busy if we're waiting for anything. There might be latency
+      -- between the last writer unlocking and the last write even appearing
+      -- at the periphery of the kernel, let alone be accepted by the DDR
+      -- controller or acknowledged, so we need a short timer to bridge this
+      -- gap. Once it appears on the kernel periphery, write_busy will take
+      -- over.
+      if (pages_title_wait = '1'
+        or pages_text_wait = '1'
+        or result_title_wait = '1'
+        or result_count_wait = '1'
+        or stats_wait = '1'
+        or write_busy = '1'
+      ) then
+        timer := "01111";
+        busy := '1';
+      elsif timer(4) = '0' then
+        timer := timer - 1;
+        busy := '1';
+      else
+        busy := '0';
+      end if;
 
       -- Handle the start command.
       if busy = '0' and mmio_cmd.s_start = '1' then
