@@ -334,7 +334,7 @@ begin
     mmio_write(4, X"00000000", mmio_source, mmio_sink); -- Pages first index
     mmio_write(5, X"00000003", mmio_source, mmio_sink); -- Pages last index
     mmio_write(6, X"00000000", mmio_source, mmio_sink); -- Result first index
-    mmio_write(7, X"00000000", mmio_source, mmio_sink); -- Result last index
+    mmio_write(7, X"00000002", mmio_source, mmio_sink); -- Result last index
     mmio_write(8, X"00000000", mmio_source, mmio_sink); -- Stats first index
     mmio_write(9, X"00000000", mmio_source, mmio_sink); -- Stats last index
 

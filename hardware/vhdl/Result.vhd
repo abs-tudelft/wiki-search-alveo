@@ -78,7 +78,7 @@ begin
       BUS_BURST_STEP_LEN => 1,
       BUS_BURST_MAX_LEN  => 64,
       INDEX_WIDTH        => 32,
-      CFG                => "listprim(8)",
+      CFG                => "listprim(8;last_from_length=0)",
       CMD_TAG_ENABLE     => true,
       CMD_TAG_WIDTH      => 1
     )

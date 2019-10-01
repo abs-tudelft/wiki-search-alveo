@@ -241,8 +241,15 @@ begin
 
           if r_rem_d2(16) = '1' and r_rem_d2(0) = '0' then
 
-            -- Write statistics.
-            if st_valid = '0' then
+            -- Write statistics and terminate values stream.
+            if rtc_valid = '0' and st_valid = '0' then
+
+              -- Write last value for values stream.
+              rtc_valid  := '1';
+              rtc_dvalid := '0';
+              rtc_last   := '1';
+              rtc_data   := X"00";
+              rtc_count  := "0";
 
               -- Write statistics to shared memory.
               st_valid  := '1';
@@ -267,7 +274,7 @@ begin
           else
 
             -- Write unused result records.
-            if rt_valid = '0' and rtc_valid = '0' and rc_valid = '0' then
+            if rt_valid = '0' and rc_valid = '0' then
 
               -- Send padding to title length stream.
               rt_valid   := '1';
@@ -275,13 +282,6 @@ begin
               rt_last    := r_rem_d2(16);
               rt_length  := X"00000000";
               rt_count   := "1";
-
-              -- Send padding to title character stream.
-              rtc_valid  := '1';
-              rtc_dvalid := '0';
-              rtc_last   := '1';
-              rtc_data   := X"00";
-              rtc_count  := "0";
 
               -- Send padding to match count stream.
               rc_valid   := '1';
@@ -311,7 +311,7 @@ begin
             ptc_valid  := '0';
             rtc_valid  := '1';
             rtc_dvalid := ptc_dvalid;
-            rtc_last   := ptc_last;
+            rtc_last   := '0';
             rtc_data   := ptc_data;
             rtc_count  := ptc_count;
             if ptc_last = '1' then
