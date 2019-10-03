@@ -35,6 +35,7 @@ entity word_match_AxiTop is
     BUS_ADDR_WIDTH              : natural := 64;
     BUS_DATA_WIDTH              : natural := 512;
     BUS_STROBE_WIDTH            : natural := 64;
+    BUS_INNER_DATA_WIDTH        : natural := 64;
     BUS_LEN_WIDTH               : natural := 8;
     BUS_BURST_MAX_LEN           : natural := 64;
     BUS_BURST_STEP_LEN          : natural := 1;
@@ -138,7 +139,7 @@ architecture Behavorial of word_match_AxiTop is
       rd_mst_rreq_len           : out std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
       rd_mst_rdat_valid         : in  std_logic;
       rd_mst_rdat_ready         : out std_logic;
-      rd_mst_rdat_data          : in  std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
+      rd_mst_rdat_data          : in  std_logic_vector(BUS_INNER_DATA_WIDTH-1 downto 0);
       rd_mst_rdat_last          : in  std_logic;
 
       wr_mst_wreq_valid         : out std_logic;
@@ -147,8 +148,8 @@ architecture Behavorial of word_match_AxiTop is
       wr_mst_wreq_len           : out std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
       wr_mst_wdat_valid         : out std_logic;
       wr_mst_wdat_ready         : in std_logic;
-      wr_mst_wdat_data          : out std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
-      wr_mst_wdat_strobe        : out std_logic_vector(BUS_STROBE_WIDTH-1 downto 0);
+      wr_mst_wdat_data          : out std_logic_vector(BUS_INNER_DATA_WIDTH-1 downto 0);
+      wr_mst_wdat_strobe        : out std_logic_vector(BUS_INNER_DATA_WIDTH/8-1 downto 0);
       wr_mst_wdat_last          : out std_logic;
       mmio_awvalid              : in  std_logic;
       mmio_awready              : out std_logic;
@@ -182,7 +183,7 @@ architecture Behavorial of word_match_AxiTop is
   signal rd_mst_rreq_len        : std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
   signal rd_mst_rreq_valid      : std_logic;
   signal rd_mst_rreq_ready      : std_logic;
-  signal rd_mst_rdat_data       : std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
+  signal rd_mst_rdat_data       : std_logic_vector(BUS_INNER_DATA_WIDTH-1 downto 0);
   signal rd_mst_rdat_last       : std_logic;
   signal rd_mst_rdat_valid      : std_logic;
   signal rd_mst_rdat_ready      : std_logic;
@@ -192,13 +193,13 @@ architecture Behavorial of word_match_AxiTop is
   signal wr_mst_wreq_len        : std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
   signal wr_mst_wdat_valid      : std_logic;
   signal wr_mst_wdat_ready      : std_logic;
-  signal wr_mst_wdat_data       : std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
-  signal wr_mst_wdat_strobe     : std_logic_vector(BUS_STROBE_WIDTH-1 downto 0);
+  signal wr_mst_wdat_data       : std_logic_vector(BUS_INNER_DATA_WIDTH-1 downto 0);
+  signal wr_mst_wdat_strobe     : std_logic_vector(BUS_INNER_DATA_WIDTH/8-1 downto 0);
   signal wr_mst_wdat_last       : std_logic;
 begin
 
   -- Active low reset
-  bcd_reset_n <= '0' when bcd_reset = '1' else '0';
+  bcd_reset_n <= not bcd_reset;
 
   -----------------------------------------------------------------------------
   -- Fletcher generated wrapper
@@ -252,17 +253,15 @@ begin
   -----------------------------------------------------------------------------
   -- AXI read converter
   -----------------------------------------------------------------------------
-  -- Buffering bursts is disabled (ENABLE_FIFO=false) because BufferReaders
-  -- are already able to absorb full bursts.
   axi_read_conv_inst: AxiReadConverter
     generic map (
       ADDR_WIDTH                => BUS_ADDR_WIDTH,
       MASTER_DATA_WIDTH         => BUS_DATA_WIDTH,
       MASTER_LEN_WIDTH          => BUS_LEN_WIDTH,
-      SLAVE_DATA_WIDTH          => BUS_DATA_WIDTH,
+      SLAVE_DATA_WIDTH          => BUS_INNER_DATA_WIDTH,
       SLAVE_LEN_WIDTH           => BUS_LEN_WIDTH,
       SLAVE_MAX_BURST           => BUS_BURST_MAX_LEN,
-      ENABLE_FIFO               => false,
+      ENABLE_FIFO               => true,
       SLV_REQ_SLICE_DEPTH       => 0,
       SLV_DAT_SLICE_DEPTH       => 0,
       MST_REQ_SLICE_DEPTH       => 0,
@@ -292,14 +291,13 @@ begin
   -----------------------------------------------------------------------------
   -- AXI write converter
   -----------------------------------------------------------------------------
-  -- Buffering bursts is disabled (ENABLE_FIFO=false) because BufferWriters
-  -- are already able to absorb full bursts.
+  -- Disable the FIFO because we don't care about write performance.
   axi_write_conv_inst: AxiWriteConverter
     generic map (
       ADDR_WIDTH                => BUS_ADDR_WIDTH,
       MASTER_DATA_WIDTH         => BUS_DATA_WIDTH,
       MASTER_LEN_WIDTH          => BUS_LEN_WIDTH,
-      SLAVE_DATA_WIDTH          => BUS_DATA_WIDTH,
+      SLAVE_DATA_WIDTH          => BUS_INNER_DATA_WIDTH,
       SLAVE_LEN_WIDTH           => BUS_LEN_WIDTH,
       SLAVE_MAX_BURST           => BUS_BURST_MAX_LEN,
       ENABLE_FIFO               => false,

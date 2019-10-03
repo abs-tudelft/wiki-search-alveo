@@ -36,7 +36,7 @@ entity word_match_SimTop_tc is
     BUS_DATA_WIDTH              : natural := 512;
     BUS_STROBE_WIDTH            : natural := 64;
     BUS_LEN_WIDTH               : natural := 8;
-    BUS_BURST_MAX_LEN           : natural := 4;
+    BUS_BURST_MAX_LEN           : natural := 64;
     BUS_BURST_STEP_LEN          : natural := 1;
 
     -- MMIO bus properties
