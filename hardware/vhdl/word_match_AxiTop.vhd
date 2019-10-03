@@ -29,7 +29,7 @@ use work.UtilMisc_pkg.all;
 -- Requires an AXI4 port to host memory.
 -- Requires an AXI4-lite port from host for MMIO.
 -------------------------------------------------------------------------------
-entity AxiTop is
+entity word_match_AxiTop is
   generic (
     -- AXI4 (full) bus properties for memory access.
     BUS_ADDR_WIDTH              : natural := 64;
@@ -116,9 +116,9 @@ entity AxiTop is
 
     write_busy                  : in  std_logic := '0'
   );
-end AxiTop;
+end word_match_AxiTop;
 
-architecture Behavorial of AxiTop is
+architecture Behavorial of word_match_AxiTop is
 
   -----------------------------------------------------------------------------
   -- Generated top-level wrapper component.

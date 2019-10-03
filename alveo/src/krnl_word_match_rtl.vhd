@@ -113,7 +113,7 @@ begin
   s_axi_control_AWADDR32 <= std_logic_vector(resize(unsigned(s_axi_control_AWADDR), 32));
   s_axi_control_ARADDR32 <= std_logic_vector(resize(unsigned(s_axi_control_ARADDR), 32));
 
-  inst: entity work.AxiTop
+  inst: entity work.word_match_AxiTop
     generic map (
       BUS_ADDR_WIDTH      => C_M_AXI_ADDR_WIDTH,
       BUS_DATA_WIDTH      => C_M_AXI_DATA_WIDTH,

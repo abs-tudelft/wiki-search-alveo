@@ -24,7 +24,7 @@ use work.UtilConv_pkg.all;
 
 -- pragma simulation timeout 50 us
 
-entity SimTop_tc is
+entity word_match_SimTop_tc is
   generic (
     -- Accelerator properties
     INDEX_WIDTH                 : natural := 32;
@@ -36,69 +36,16 @@ entity SimTop_tc is
     BUS_DATA_WIDTH              : natural := 512;
     BUS_STROBE_WIDTH            : natural := 64;
     BUS_LEN_WIDTH               : natural := 8;
-    BUS_BURST_MAX_LEN           : natural := 64;
+    BUS_BURST_MAX_LEN           : natural := 4;
     BUS_BURST_STEP_LEN          : natural := 1;
 
     -- MMIO bus properties
     SLV_BUS_ADDR_WIDTH          : natural := 32;
     SLV_BUS_DATA_WIDTH          : natural := 32
   );
-end SimTop_tc;
+end word_match_SimTop_tc;
 
-architecture Behavorial of SimTop_tc is
-
-  -----------------------------------------------------------------------------
-  -- Default wrapper component.
-  -----------------------------------------------------------------------------
-  component Mantle is
-    generic(
-      BUS_ADDR_WIDTH            : natural
-    );
-    port(
-      bcd_clk                   : in  std_logic;
-      bcd_reset                 : in  std_logic;
-      kcd_clk                   : in  std_logic;
-      kcd_reset                 : in  std_logic;
-      rd_mst_rreq_valid          : out std_logic;
-      rd_mst_rreq_ready          : in  std_logic;
-      rd_mst_rreq_addr           : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
-      rd_mst_rreq_len            : out std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
-      rd_mst_rdat_valid          : in  std_logic;
-      rd_mst_rdat_ready          : out std_logic;
-      rd_mst_rdat_data           : in  std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
-      rd_mst_rdat_last           : in  std_logic;
-
-      wr_mst_wreq_valid          : out std_logic;
-      wr_mst_wreq_ready          : in std_logic;
-      wr_mst_wreq_addr           : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
-      wr_mst_wreq_len            : out std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
-      wr_mst_wdat_valid          : out std_logic;
-      wr_mst_wdat_ready          : in std_logic;
-      wr_mst_wdat_data           : out std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
-      wr_mst_wdat_strobe         : out std_logic_vector(BUS_STROBE_WIDTH-1 downto 0);
-      wr_mst_wdat_last           : out std_logic;
-      mmio_awvalid              : in  std_logic;
-      mmio_awready              : out std_logic;
-      mmio_awaddr               : in  std_logic_vector(31 downto 0);
-      mmio_wvalid               : in  std_logic;
-      mmio_wready               : out std_logic;
-      mmio_wdata                : in  std_logic_vector(31 downto 0);
-      mmio_wstrb                : in  std_logic_vector(3 downto 0);
-      mmio_bvalid               : out std_logic;
-      mmio_bready               : in  std_logic;
-      mmio_bresp                : out std_logic_vector(1 downto 0);
-      mmio_arvalid              : in  std_logic;
-      mmio_arready              : out std_logic;
-      mmio_araddr               : in  std_logic_vector(31 downto 0);
-      mmio_rvalid               : out std_logic;
-      mmio_rready               : in  std_logic;
-      mmio_rdata                : out std_logic_vector(31 downto 0);
-      mmio_rresp                : out std_logic_vector(1 downto 0);
-
-      write_busy                : in  std_logic := '0'
-    );
-  end component;
-  -----------------------------------------------------------------------------
+architecture Behavorial of word_match_SimTop_tc is
 
   -- Fletcher defaults
   constant REG_CONTROL          : natural := 0;
@@ -181,23 +128,27 @@ architecture Behavorial of SimTop_tc is
   signal mmio_sink : mmio_sink_t;
 
   -- Memory interface signals
-  signal bus_rreq_addr          : std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
-  signal bus_rreq_len           : std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
-  signal bus_rreq_valid         : std_logic;
-  signal bus_rreq_ready         : std_logic;
-  signal bus_rdat_data          : std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
-  signal bus_rdat_last          : std_logic;
-  signal bus_rdat_valid         : std_logic;
-  signal bus_rdat_ready         : std_logic;
-  signal bus_wreq_addr          : std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
-  signal bus_wreq_len           : std_logic_vector(BUS_LEN_WIDTH-1 downto 0);
-  signal bus_wreq_valid         : std_logic;
-  signal bus_wreq_ready         : std_logic;
-  signal bus_wdat_data          : std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
-  signal bus_wdat_strobe        : std_logic_vector(BUS_STROBE_WIDTH-1 downto 0);
-  signal bus_wdat_last          : std_logic;
-  signal bus_wdat_valid         : std_logic;
-  signal bus_wdat_ready         : std_logic;
+  signal m_axi_aresetn          : std_logic;
+  signal m_axi_araddr           : std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
+  signal m_axi_arlen            : std_logic_vector(7 downto 0);
+  signal m_axi_arvalid          : std_logic := '0';
+  signal m_axi_arready          : std_logic;
+  signal m_axi_arsize           : std_logic_vector(2 downto 0);
+  signal m_axi_rdata            : std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
+  signal m_axi_rresp            : std_logic_vector(1 downto 0);
+  signal m_axi_rlast            : std_logic;
+  signal m_axi_rvalid           : std_logic;
+  signal m_axi_rready           : std_logic := '0';
+  signal m_axi_awvalid          : std_logic := '0';
+  signal m_axi_awready          : std_logic;
+  signal m_axi_awaddr           : std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
+  signal m_axi_awlen            : std_logic_vector(7 downto 0);
+  signal m_axi_awsize           : std_logic_vector(2 downto 0);
+  signal m_axi_wvalid           : std_logic := '0';
+  signal m_axi_wready           : std_logic;
+  signal m_axi_wdata            : std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
+  signal m_axi_wlast            : std_logic;
+  signal m_axi_wstrb            : std_logic_vector(BUS_STROBE_WIDTH-1 downto 0);
 
   procedure mmio_write (constant idx    : in  natural;
                         constant data   : in  std_logic_vector(31 downto 0);
@@ -409,103 +360,121 @@ begin
     wait;
   end process;
 
-  rmem_inst: BusReadSlaveMock
-  generic map (
-    BUS_ADDR_WIDTH              => BUS_ADDR_WIDTH,
-    BUS_LEN_WIDTH               => BUS_LEN_WIDTH,
-    BUS_DATA_WIDTH              => BUS_DATA_WIDTH,
-    SEED                        => 1337,
-    RANDOM_REQUEST_TIMING       => false,
-    RANDOM_RESPONSE_TIMING      => false,
-    SREC_FILE                   => "memory.srec"
-  )
-  port map (
-    clk                         => bcd_clk,
-    reset                       => bcd_reset,
-    rreq_valid                  => bus_rreq_valid,
-    rreq_ready                  => bus_rreq_ready,
-    rreq_addr                   => bus_rreq_addr,
-    rreq_len                    => bus_rreq_len,
-    rdat_valid                  => bus_rdat_valid,
-    rdat_ready                  => bus_rdat_ready,
-    rdat_data                   => bus_rdat_data,
-    rdat_last                   => bus_rdat_last
-  );
+  m_axi_aresetn <= not bcd_reset;
 
+  memory_inst: entity work.word_match_AxiSlaveMock
+    generic map (
+      ADDR_WIDTH                => BUS_ADDR_WIDTH,
+      DATA_WIDTH                => BUS_DATA_WIDTH,
 
-  wmem_inst: BusWriteSlaveMock
-  generic map (
-    BUS_ADDR_WIDTH              => BUS_ADDR_WIDTH,
-    BUS_LEN_WIDTH               => BUS_LEN_WIDTH,
-    BUS_DATA_WIDTH              => BUS_DATA_WIDTH,
-    BUS_STROBE_WIDTH            => BUS_STROBE_WIDTH,
-    SEED                        => 1337,
-    RANDOM_REQUEST_TIMING       => false,
-    RANDOM_RESPONSE_TIMING      => false,
-    SREC_FILE                   => ""
-  )
-  port map (
-    clk                         => bcd_clk,
-    reset                       => bcd_reset,
-    wreq_valid                  => bus_wreq_valid,
-    wreq_ready                  => bus_wreq_ready,
-    wreq_addr                   => bus_wreq_addr,
-    wreq_len                    => bus_wreq_len,
-    wdat_valid                  => bus_wdat_valid,
-    wdat_ready                  => bus_wdat_ready,
-    wdat_data                   => bus_wdat_data,
-    wdat_strobe                 => bus_wdat_strobe,
-    wdat_last                   => bus_wdat_last
-  );
+      SEED                      => 1337,
+      AW_STALL_PROB             => 0.0,
+      W_STALL_PROB              => 0.0,
+      B_STALL_PROB              => 0.0,
+      AR_STALL_PROB             => 0.0,
+      R_STALL_PROB              => 0.0,
 
+      DUMP_WRITES               => true,
+      SREC_FILE_IN              => "memory.srec",
+      SREC_FILE_OUT             => ""
+    )
+    port map (
+      aclk                      => bcd_clk,
+      aresetn                   => m_axi_aresetn,
+
+      awvalid                   => m_axi_awvalid,
+      awready                   => m_axi_awready,
+      awid                      => X"00",
+      awaddr                    => m_axi_awaddr,
+      awlen                     => m_axi_awlen,
+      awsize                    => m_axi_awsize,
+      awburst                   => "01",
+
+      wvalid                    => m_axi_wvalid,
+      wready                    => m_axi_wready,
+      wid                       => X"00",
+      wdata                     => m_axi_wdata,
+      wstrb                     => m_axi_wstrb,
+      wlast                     => m_axi_wlast,
+
+      bvalid                    => open,
+      bready                    => '1',
+      bid                       => open,
+      bresp                     => open,
+
+      arvalid                   => m_axi_arvalid,
+      arready                   => m_axi_arready,
+      arid                      => X"00",
+      araddr                    => m_axi_araddr,
+      arlen                     => m_axi_arlen,
+      arsize                    => m_axi_arsize,
+      arburst                   => "01",
+
+      rvalid                    => m_axi_rvalid,
+      rready                    => m_axi_rready,
+      rid                       => open,
+      rdata                     => m_axi_rdata,
+      rresp                     => m_axi_rresp,
+      rlast                     => m_axi_rlast
+    );
 
   -----------------------------------------------------------------------------
   -- Fletcher generated wrapper
   -----------------------------------------------------------------------------
-  Mantle_inst : Mantle
+  uut: entity work.word_match_AxiTop
     generic map (
-      BUS_ADDR_WIDTH            => BUS_ADDR_WIDTH
+      BUS_ADDR_WIDTH            => BUS_ADDR_WIDTH,
+      BUS_DATA_WIDTH            => BUS_DATA_WIDTH,
+      BUS_STROBE_WIDTH          => BUS_STROBE_WIDTH,
+      BUS_LEN_WIDTH             => BUS_LEN_WIDTH,
+      BUS_BURST_MAX_LEN         => BUS_BURST_MAX_LEN,
+      BUS_BURST_STEP_LEN        => BUS_BURST_STEP_LEN,
+      MMIO_ADDR_WIDTH           => SLV_BUS_ADDR_WIDTH,
+      MMIO_DATA_WIDTH           => SLV_BUS_DATA_WIDTH
     )
     port map (
       kcd_clk                   => kcd_clk,
       kcd_reset                 => kcd_reset,
       bcd_clk                   => bcd_clk,
       bcd_reset                 => bcd_reset,
-      rd_mst_rreq_valid          => bus_rreq_valid,
-      rd_mst_rreq_ready          => bus_rreq_ready,
-      rd_mst_rreq_addr           => bus_rreq_addr,
-      rd_mst_rreq_len            => bus_rreq_len,
-      rd_mst_rdat_valid          => bus_rdat_valid,
-      rd_mst_rdat_ready          => bus_rdat_ready,
-      rd_mst_rdat_data           => bus_rdat_data,
-      rd_mst_rdat_last           => bus_rdat_last,
-
-      wr_mst_wreq_valid          => bus_wreq_valid,
-      wr_mst_wreq_ready          => bus_wreq_ready,
-      wr_mst_wreq_addr           => bus_wreq_addr,
-      wr_mst_wreq_len            => bus_wreq_len,
-      wr_mst_wdat_valid          => bus_wdat_valid,
-      wr_mst_wdat_ready          => bus_wdat_ready,
-      wr_mst_wdat_data           => bus_wdat_data,
-      wr_mst_wdat_strobe         => bus_wdat_strobe,
-      wr_mst_wdat_last           => bus_wdat_last,
-      mmio_awvalid              => mmio_awvalid,
-      mmio_awready              => mmio_awready,
-      mmio_awaddr               => mmio_awaddr,
-      mmio_wvalid               => mmio_wvalid,
-      mmio_wready               => mmio_wready,
-      mmio_wdata                => mmio_wdata,
-      mmio_wstrb                => mmio_wstrb,
-      mmio_bvalid               => mmio_bvalid,
-      mmio_bready               => mmio_bready,
-      mmio_bresp                => mmio_bresp,
-      mmio_arvalid              => mmio_arvalid,
-      mmio_arready              => mmio_arready,
-      mmio_araddr               => mmio_araddr,
-      mmio_rvalid               => mmio_rvalid,
-      mmio_rready               => mmio_rready,
-      mmio_rdata                => mmio_rdata,
-      mmio_rresp                => mmio_rresp
+      m_axi_araddr              => m_axi_araddr,
+      m_axi_arlen               => m_axi_arlen,
+      m_axi_arvalid             => m_axi_arvalid,
+      m_axi_arready             => m_axi_arready,
+      m_axi_arsize              => m_axi_arsize,
+      m_axi_rdata               => m_axi_rdata,
+      m_axi_rresp               => m_axi_rresp,
+      m_axi_rlast               => m_axi_rlast,
+      m_axi_rvalid              => m_axi_rvalid,
+      m_axi_rready              => m_axi_rready,
+      m_axi_awvalid             => m_axi_awvalid,
+      m_axi_awready             => m_axi_awready,
+      m_axi_awaddr              => m_axi_awaddr,
+      m_axi_awlen               => m_axi_awlen,
+      m_axi_awsize              => m_axi_awsize,
+      m_axi_wvalid              => m_axi_wvalid,
+      m_axi_wready              => m_axi_wready,
+      m_axi_wdata               => m_axi_wdata,
+      m_axi_wlast               => m_axi_wlast,
+      m_axi_wstrb               => m_axi_wstrb,
+      s_axi_awvalid             => mmio_awvalid,
+      s_axi_awready             => mmio_awready,
+      s_axi_awaddr              => mmio_awaddr,
+      s_axi_wvalid              => mmio_wvalid,
+      s_axi_wready              => mmio_wready,
+      s_axi_wdata               => mmio_wdata,
+      s_axi_wstrb               => mmio_wstrb,
+      s_axi_bvalid              => mmio_bvalid,
+      s_axi_bready              => mmio_bready,
+      s_axi_bresp               => mmio_bresp,
+      s_axi_arvalid             => mmio_arvalid,
+      s_axi_arready             => mmio_arready,
+      s_axi_araddr              => mmio_araddr,
+      s_axi_rvalid              => mmio_rvalid,
+      s_axi_rready              => mmio_rready,
+      s_axi_rdata               => mmio_rdata,
+      s_axi_rresp               => mmio_rresp,
+      write_busy                => '0'
     );
 
 end architecture;
