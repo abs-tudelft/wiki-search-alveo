@@ -268,11 +268,11 @@ begin
     -- 2. Write addresses of the arrow buffers in the SREC file.
     mmio_write(10, X"00000000", mmio_source, mmio_sink); -- Pages title_offsets
     mmio_write(11, X"00000000", mmio_source, mmio_sink);
-    mmio_write(12, X"00000040", mmio_source, mmio_sink); -- Pages title_values
+    mmio_write(12, X"000089c0", mmio_source, mmio_sink); -- Pages title_values
     mmio_write(13, X"00000000", mmio_source, mmio_sink);
-    mmio_write(14, X"00000080", mmio_source, mmio_sink); -- Pages text_offsets
+    mmio_write(14, X"00032f00", mmio_source, mmio_sink); -- Pages text_offsets
     mmio_write(15, X"00000000", mmio_source, mmio_sink);
-    mmio_write(16, X"000000c0", mmio_source, mmio_sink); -- Pages text_values
+    mmio_write(16, X"0003b8c0", mmio_source, mmio_sink); -- Pages text_values
     mmio_write(17, X"00000000", mmio_source, mmio_sink);
     mmio_write(18, X"00001000", mmio_source, mmio_sink); -- Result title_offsets
     mmio_write(19, X"00000000", mmio_source, mmio_sink);
@@ -285,7 +285,8 @@ begin
 
     -- 3. Write recordbatch bounds.
     mmio_write(4, X"00000000", mmio_source, mmio_sink); -- Pages first index
-    mmio_write(5, X"00000003", mmio_source, mmio_sink); -- Pages last index
+    --mmio_write(5, X"0000226c", mmio_source, mmio_sink); -- Pages last index
+    mmio_write(5, X"00000100", mmio_source, mmio_sink); -- Pages last index
     mmio_write(6, X"00000000", mmio_source, mmio_sink); -- Result first index
     mmio_write(7, X"00000002", mmio_source, mmio_sink); -- Result last index
     mmio_write(8, X"00000000", mmio_source, mmio_sink); -- Stats first index
