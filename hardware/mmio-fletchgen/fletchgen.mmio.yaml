@@ -288,3 +288,26 @@ fields:
     behavior: control
     group: cfg
 
+  - address: 144
+    bitrange: 15..0
+    name: max_word_matches
+    brief: |
+      Maximum number of matches in any single page.
+    behavior: latching
+    group: result
+
+  - address: 148
+    bitrange: 19..0
+    name: max_page_idx
+    brief: |
+      Index of the page with the most matches, relative to `first_idx` in the
+      command registers.
+    behavior: latching
+    group: result
+
+  - address: 152
+    name: cycle_count
+    brief: |
+      Number of cycles taken by the last command.
+    behavior: latching
+    group: result

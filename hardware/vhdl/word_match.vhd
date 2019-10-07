@@ -354,6 +354,7 @@ begin
     port map (
       clk                       => kcd_clk,
       reset                     => kcd_reset,
+      mmio_start                => mmio_cmd.s_start,
       mmio_cfg                  => mmio_cfg,
       mmio_result               => mmio_result,
       filter_result_valid       => filter_result_valid,
