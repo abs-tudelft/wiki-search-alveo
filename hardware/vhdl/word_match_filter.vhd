@@ -15,6 +15,7 @@ entity word_match_filter is
     ---------------------------------------------------------------------------
     -- MMIO interface
     ---------------------------------------------------------------------------
+    mmio_start                : in  std_logic;
     mmio_cfg                  : in  mmio_g_cfg_o_type;
     mmio_result               : out mmio_g_result_i_type;
 
@@ -139,16 +140,23 @@ begin
     -- Number of result records remaining, diminished-two.
     variable r_rem_d2   : unsigned(16 downto 0);
 
+    -- Busy flag.
+    variable busy       : std_logic;
+
     -- Whether we've seen and handled the last transfer yet. When set, we flush
     -- any unused result records and write the statistics.
     variable last_seen  : std_logic;
 
     -- The index of the statistics word that we have to send next.
-    variable st_index   : std_logic;
+    variable st_index   : unsigned(1 downto 0);
 
-    -- Total word and page matches for the current command.
+    -- Statistics counters for the current command.
     variable word_matches : unsigned(31 downto 0);
     variable page_matches : unsigned(31 downto 0);
+    variable max_matches  : unsigned(15 downto 0);
+    variable max_page_idx : unsigned(19 downto 0);
+    variable cur_page_idx : unsigned(19 downto 0);
+    variable cycle_count  : unsigned(31 downto 0);
 
   begin
     if rising_edge(clk) then
@@ -226,8 +234,17 @@ begin
 
             end if;
 
+            -- Update the maximum number of matches per page.
+            if unsigned(mc_amount) >= max_matches then
+              max_matches := unsigned(mc_amount);
+              max_page_idx := cur_page_idx;
+            end if;
+
             -- Update word match count.
             word_matches := word_matches + unsigned(mc_amount);
+
+            -- Update the current page index.
+            cur_page_idx := cur_page_idx + 1;
 
             -- Pend the statistics write command and flushing of the result
             -- record streams if this was the last transfer.
@@ -245,43 +262,69 @@ begin
           if r_rem_d2(16) = '1' and r_rem_d2(0) = '0' then
 
             -- Write statistics and terminate values stream.
-            if rtc_valid = '0' and st_valid = '0' and st_index = '0' then
+            if rtc_valid = '0' and st_valid = '0' then
 
-              -- Write last value for values stream.
-              rtc_valid  := '1';
-              rtc_dvalid := '0';
-              rtc_last   := '1';
-              rtc_data   := X"00";
-              rtc_count  := "0";
+              case st_index is
+                when "00" =>
 
-              -- Write first statistics word to shared memory.
+                  -- Write last value for values stream.
+                  rtc_valid  := '1';
+                  rtc_dvalid := '0';
+                  rtc_last   := '1';
+                  rtc_data   := X"00";
+                  rtc_count  := "0";
+
+                  -- Write first statistics word to shared memory.
+                  st_last   := '0';
+                  st_data   := std_logic_vector(page_matches);
+
+                when "01" =>
+
+                  -- Write second statistics word to shared memory.
+                  st_last   := '0';
+                  st_data   := std_logic_vector(word_matches);
+
+                when "10" =>
+
+                  -- Write third statistics word to shared memory.
+                  st_last   := '0';
+                  st_data(31 downto 20) := std_logic_vector(max_matches(11 downto 0));
+                  st_data(19 downto 0) := std_logic_vector(max_page_idx);
+
+                when others =>
+
+                  -- Write fourth statistics word to shared memory.
+                  st_last   := '1';
+                  st_data   := std_logic_vector(cycle_count);
+
+                  -- Write statistics to MMIO.
+                  mmio_result.f_num_word_matches_write_data <= std_logic_vector(word_matches);
+                  mmio_result.f_num_word_matches_write_enable <= '1';
+                  mmio_result.f_num_page_matches_write_data <= std_logic_vector(page_matches);
+                  mmio_result.f_num_page_matches_write_enable <= '1';
+                  mmio_result.f_max_word_matches_write_data <= std_logic_vector(max_matches);
+                  mmio_result.f_max_word_matches_write_enable <= '1';
+                  mmio_result.f_max_page_idx_write_data <= std_logic_vector(max_page_idx);
+                  mmio_result.f_max_page_idx_write_enable <= '1';
+                  mmio_result.f_cycle_count_write_data <= std_logic_vector(cycle_count);
+                  mmio_result.f_cycle_count_write_enable <= '1';
+
+                  -- Reset the relevant state for the next command.
+                  busy         := '0';
+                  st_index     := "00";
+                  last_seen    := '0';
+                  page_matches := (others => '0');
+                  word_matches := (others => '0');
+                  max_matches  := (others => '0');
+                  max_page_idx := (others => '0');
+                  cur_page_idx := (others => '0');
+                  cycle_count  := (others => '0');
+
+              end case;
+
               st_valid  := '1';
               st_dvalid := '1';
-              st_last   := '0';
-              st_data   := std_logic_vector(page_matches);
-
-              -- Write the second word next.
-              st_index  := '1';
-
-            elsif st_valid = '0' and st_index = '1' then
-
-              -- Write second statistics word to shared memory.
-              st_valid  := '1';
-              st_dvalid := '1';
-              st_last   := '1';
-              st_data   := std_logic_vector(word_matches);
-
-              -- Write statistics to MMIO.
-              mmio_result.f_num_word_matches_write_data <= std_logic_vector(word_matches);
-              mmio_result.f_num_word_matches_write_enable <= '1';
-              mmio_result.f_num_page_matches_write_data <= std_logic_vector(page_matches);
-              mmio_result.f_num_page_matches_write_enable <= '1';
-
-              -- Reset the relevant state for the next command.
-              st_index     := '0';
-              last_seen    := '0';
-              page_matches := (others => '0');
-              word_matches := (others => '0');
+              st_index  := st_index + 1;
 
             end if;
 
@@ -342,6 +385,14 @@ begin
         r_rem_d2 := resize(unsigned(filter_result_count), 17) - 2;
       end if;
 
+      -- Handle the cycle counter.
+      if busy = '1' then
+        cycle_count := cycle_count + 1;
+      end if;
+      if mmio_start = '1' then
+        busy := '1';
+      end if;
+
       -- Handle reset.
       if reset = '1' then
         pt_valid      := '0';
@@ -353,10 +404,15 @@ begin
         st_valid      := '0';
         title_cmd     := "00";
         r_rem_d2      := (0 => '0', others => '1');
-        st_index      := '0';
+        st_index      := "00";
+        busy          := '0';
         last_seen     := '0';
         word_matches  := (others => '0');
         page_matches  := (others => '0');
+        max_matches   := (others => '0');
+        max_page_idx  := (others => '0');
+        cur_page_idx  := (others => '0');
+        cycle_count   := (others => '0');
       end if;
 
       -- Assign output signals.

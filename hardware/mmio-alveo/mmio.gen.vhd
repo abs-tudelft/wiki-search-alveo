@@ -52,6 +52,10 @@ entity mmio is
     g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
 
     -- Interface group for:
+    --  - field cycle_count: Number of cycles taken by the last command.
+    --  - field max_page_idx: Index of the page with the most matches, relative
+    --    to `first_idx` in the command registers.
+    --  - field max_word_matches: Maximum number of matches in any single page.
     --  - field num_page_matches: Number of pages that contain the specified
     --    word at least as many times as requested by `min_match`.
     --  - field num_word_matches: Number of times that the word occured in the
@@ -583,6 +587,48 @@ begin
     variable f_num_page_matches_r : f_num_page_matches_r_array(0 to 0)
         := (others => F_NUM_PAGE_MATCHES_R_RESET);
 
+    -- Private declarations for field max_word_matches: Maximum number of
+    -- matches in any single page.
+    type f_max_word_matches_r_type is record
+      d : std_logic_vector(15 downto 0);
+      v : std_logic;
+    end record;
+    constant F_MAX_WORD_MATCHES_R_RESET : f_max_word_matches_r_type := (
+      d => (others => '0'),
+      v => '0'
+    );
+    type f_max_word_matches_r_array is array (natural range <>) of f_max_word_matches_r_type;
+    variable f_max_word_matches_r : f_max_word_matches_r_array(0 to 0)
+        := (others => F_MAX_WORD_MATCHES_R_RESET);
+
+    -- Private declarations for field max_page_idx: Index of the page with the
+    -- most matches, relative to `first_idx` in the command registers.
+    type f_max_page_idx_r_type is record
+      d : std_logic_vector(19 downto 0);
+      v : std_logic;
+    end record;
+    constant F_MAX_PAGE_IDX_R_RESET : f_max_page_idx_r_type := (
+      d => (others => '0'),
+      v => '0'
+    );
+    type f_max_page_idx_r_array is array (natural range <>) of f_max_page_idx_r_type;
+    variable f_max_page_idx_r : f_max_page_idx_r_array(0 to 0)
+        := (others => F_MAX_PAGE_IDX_R_RESET);
+
+    -- Private declarations for field cycle_count: Number of cycles taken by the
+    -- last command.
+    type f_cycle_count_r_type is record
+      d : std_logic_vector(31 downto 0);
+      v : std_logic;
+    end record;
+    constant F_CYCLE_COUNT_R_RESET : f_cycle_count_r_type := (
+      d => (others => '0'),
+      v => '0'
+    );
+    type f_cycle_count_r_array is array (natural range <>) of f_cycle_count_r_type;
+    variable f_cycle_count_r : f_cycle_count_r_array(0 to 0)
+        := (others => F_CYCLE_COUNT_R_RESET);
+
     -- Temporary variables for the field templates.
     variable tmp_data    : std_logic;
     variable tmp_strb    : std_logic;
@@ -592,6 +638,7 @@ begin
     variable tmp_strb8   : std_logic_vector(7 downto 0);
     variable tmp_data16  : std_logic_vector(15 downto 0);
     variable tmp_strb16  : std_logic_vector(15 downto 0);
+    variable tmp_data20  : std_logic_vector(19 downto 0);
     variable tmp_data32  : std_logic_vector(31 downto 0);
     variable tmp_strb32  : std_logic_vector(31 downto 0);
     variable tmp_data64  : std_logic_vector(63 downto 0);
@@ -763,6 +810,30 @@ begin
       -- Handle hardware write for field num_page_matches: enabled.
       if g_result_i.f_num_page_matches_write_enable = '1' then
         f_num_page_matches_r((0)).d := g_result_i.f_num_page_matches_write_data;
+      end if;
+
+      -- Pre-bus logic for field max_word_matches: Maximum number of matches in
+      -- any single page.
+
+      -- Handle hardware write for field max_word_matches: enabled.
+      if g_result_i.f_max_word_matches_write_enable = '1' then
+        f_max_word_matches_r((0)).d := g_result_i.f_max_word_matches_write_data;
+      end if;
+
+      -- Pre-bus logic for field max_page_idx: Index of the page with the most
+      -- matches, relative to `first_idx` in the command registers.
+
+      -- Handle hardware write for field max_page_idx: enabled.
+      if g_result_i.f_max_page_idx_write_enable = '1' then
+        f_max_page_idx_r((0)).d := g_result_i.f_max_page_idx_write_data;
+      end if;
+
+      -- Pre-bus logic for field cycle_count: Number of cycles taken by the last
+      -- command.
+
+      -- Handle hardware write for field cycle_count: enabled.
+      if g_result_i.f_cycle_count_write_enable = '1' then
+        f_cycle_count_r((0)).d := g_result_i.f_cycle_count_write_data;
       end if;
 
       -------------------------------------------------------------------------
@@ -2391,7 +2462,7 @@ begin
 
           end if;
 
-        when others => -- "100010"
+        when "100010" =>
           -- r_addr = 000000000000000000000000100010--
 
           if r_req then
@@ -2421,6 +2492,114 @@ begin
 
           -- Read logic for block num_page_matches_reg: block containing bits
           -- 31..0 of register `num_page_matches_reg` (`NUM_PAGE_MATCHES`).
+          if r_req then
+
+            r_data := r_hold(31 downto 0);
+            r_multi := '0';
+
+          end if;
+
+        when "100011" =>
+          -- r_addr = 000000000000000000000000100011--
+
+          if r_req then
+
+            -- Clear holding register location prior to read.
+            r_hold := (others => '0');
+
+          end if;
+
+          -- Read logic for field max_word_matches: Maximum number of matches in
+          -- any single page.
+
+          if r_req then
+            tmp_data16 := r_hold(15 downto 0);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data16 := f_max_word_matches_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(15 downto 0) := tmp_data16;
+          end if;
+
+          -- Read logic for block max_word_matches_reg: block containing bits
+          -- 31..0 of register `max_word_matches_reg` (`MAX_WORD_MATCHES`).
+          if r_req then
+
+            r_data := r_hold(31 downto 0);
+            r_multi := '0';
+
+          end if;
+
+        when "100100" =>
+          -- r_addr = 000000000000000000000000100100--
+
+          if r_req then
+
+            -- Clear holding register location prior to read.
+            r_hold := (others => '0');
+
+          end if;
+
+          -- Read logic for field max_page_idx: Index of the page with the most
+          -- matches, relative to `first_idx` in the command registers.
+
+          if r_req then
+            tmp_data20 := r_hold(19 downto 0);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data20 := f_max_page_idx_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(19 downto 0) := tmp_data20;
+          end if;
+
+          -- Read logic for block max_page_idx_reg: block containing bits 31..0
+          -- of register `max_page_idx_reg` (`MAX_PAGE_IDX`).
+          if r_req then
+
+            r_data := r_hold(31 downto 0);
+            r_multi := '0';
+
+          end if;
+
+        when others => -- "100101"
+          -- r_addr = 000000000000000000000000100101--
+
+          if r_req then
+
+            -- Clear holding register location prior to read.
+            r_hold := (others => '0');
+
+          end if;
+
+          -- Read logic for field cycle_count: Number of cycles taken by the
+          -- last command.
+
+          if r_req then
+            tmp_data32 := r_hold(31 downto 0);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data32 := f_cycle_count_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(31 downto 0) := tmp_data32;
+          end if;
+
+          -- Read logic for block cycle_count_reg: block containing bits 31..0
+          -- of register `cycle_count_reg` (`CYCLE_COUNT`).
           if r_req then
 
             r_data := r_hold(31 downto 0);
@@ -3887,6 +4066,33 @@ begin
       if reset = '1' then
         f_num_page_matches_r((0)).d := (others => '0');
         f_num_page_matches_r((0)).v := '0';
+      end if;
+
+      -- Post-bus logic for field max_word_matches: Maximum number of matches in
+      -- any single page.
+
+      -- Handle reset for field max_word_matches.
+      if reset = '1' then
+        f_max_word_matches_r((0)).d := (others => '0');
+        f_max_word_matches_r((0)).v := '0';
+      end if;
+
+      -- Post-bus logic for field max_page_idx: Index of the page with the most
+      -- matches, relative to `first_idx` in the command registers.
+
+      -- Handle reset for field max_page_idx.
+      if reset = '1' then
+        f_max_page_idx_r((0)).d := (others => '0');
+        f_max_page_idx_r((0)).v := '0';
+      end if;
+
+      -- Post-bus logic for field cycle_count: Number of cycles taken by the
+      -- last command.
+
+      -- Handle reset for field cycle_count.
+      if reset = '1' then
+        f_cycle_count_r((0)).d := (others => '0');
+        f_cycle_count_r((0)).v := '0';
       end if;
 
       -------------------------------------------------------------------------

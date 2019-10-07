@@ -58,12 +58,24 @@ package mmio_pkg is
     f_num_word_matches_write_enable : std_logic;
     f_num_page_matches_write_data : std_logic_vector(31 downto 0);
     f_num_page_matches_write_enable : std_logic;
+    f_max_word_matches_write_data : std_logic_vector(15 downto 0);
+    f_max_word_matches_write_enable : std_logic;
+    f_max_page_idx_write_data : std_logic_vector(19 downto 0);
+    f_max_page_idx_write_enable : std_logic;
+    f_cycle_count_write_data : std_logic_vector(31 downto 0);
+    f_cycle_count_write_enable : std_logic;
   end record;
   constant MMIO_G_RESULT_I_RESET : mmio_g_result_i_type := (
     f_num_word_matches_write_data => (others => '0'),
     f_num_word_matches_write_enable => '0',
     f_num_page_matches_write_data => (others => '0'),
-    f_num_page_matches_write_enable => '0'
+    f_num_page_matches_write_enable => '0',
+    f_max_word_matches_write_data => (others => '0'),
+    f_max_word_matches_write_enable => '0',
+    f_max_page_idx_write_data => (others => '0'),
+    f_max_page_idx_write_enable => '0',
+    f_cycle_count_write_data => (others => '0'),
+    f_cycle_count_write_enable => '0'
   );
   type mmio_g_stat_i_type is record
     s_starting : std_logic;
@@ -120,6 +132,11 @@ package mmio_pkg is
       g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
 
       -- Interface group for:
+      --  - field cycle_count: Number of cycles taken by the last command.
+      --  - field max_page_idx: Index of the page with the most matches,
+      --    relative to `first_idx` in the command registers.
+      --  - field max_word_matches: Maximum number of matches in any single
+      --    page.
       --  - field num_page_matches: Number of pages that contain the specified
       --    word at least as many times as requested by `min_match`.
       --  - field num_word_matches: Number of times that the word occured in the
