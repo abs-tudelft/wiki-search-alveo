@@ -32,8 +32,8 @@ entity Stats is
     Stats_stats_bus_wreq_len    : out std_logic_vector(7 downto 0);
     Stats_stats_bus_wdat_valid  : out std_logic;
     Stats_stats_bus_wdat_ready  : in  std_logic;
-    Stats_stats_bus_wdat_data   : out std_logic_vector(511 downto 0);
-    Stats_stats_bus_wdat_strobe : out std_logic_vector(63 downto 0);
+    Stats_stats_bus_wdat_data   : out std_logic_vector(63 downto 0);
+    Stats_stats_bus_wdat_strobe : out std_logic_vector(7 downto 0);
     Stats_stats_bus_wdat_last   : out std_logic
   );
 end entity;
@@ -43,9 +43,9 @@ begin
     generic map (
       BUS_ADDR_WIDTH     => 64,
       BUS_LEN_WIDTH      => 8,
-      BUS_DATA_WIDTH     => 512,
-      BUS_STROBE_WIDTH   => 64,
-      BUS_BURST_STEP_LEN => 1,
+      BUS_DATA_WIDTH     => 64,
+      BUS_STROBE_WIDTH   => 8,
+      BUS_BURST_STEP_LEN => 8,
       BUS_BURST_MAX_LEN  => 64,
       INDEX_WIDTH        => 32,
       CFG                => "prim(64)",

@@ -39,7 +39,7 @@ entity Pages is
     Pages_title_bus_rreq_len   : out std_logic_vector(7 downto 0);
     Pages_title_bus_rdat_valid : in  std_logic;
     Pages_title_bus_rdat_ready : out std_logic;
-    Pages_title_bus_rdat_data  : in  std_logic_vector(511 downto 0);
+    Pages_title_bus_rdat_data  : in  std_logic_vector(63 downto 0);
     Pages_title_bus_rdat_last  : in  std_logic;
     Pages_text_valid           : out std_logic;
     Pages_text_ready           : in  std_logic;
@@ -68,7 +68,7 @@ entity Pages is
     Pages_text_bus_rreq_len    : out std_logic_vector(7 downto 0);
     Pages_text_bus_rdat_valid  : in  std_logic;
     Pages_text_bus_rdat_ready  : out std_logic;
-    Pages_text_bus_rdat_data   : in  std_logic_vector(511 downto 0);
+    Pages_text_bus_rdat_data   : in  std_logic_vector(63 downto 0);
     Pages_text_bus_rdat_last   : in  std_logic
   );
 end entity;
@@ -78,8 +78,8 @@ begin
     generic map (
       BUS_ADDR_WIDTH     => 64,
       BUS_LEN_WIDTH      => 8,
-      BUS_DATA_WIDTH     => 512,
-      BUS_BURST_STEP_LEN => 1,
+      BUS_DATA_WIDTH     => 64,
+      BUS_BURST_STEP_LEN => 8,
       BUS_BURST_MAX_LEN  => 64,
       INDEX_WIDTH        => 32,
       CFG                => "listprim(8)",
@@ -125,8 +125,8 @@ begin
     generic map (
       BUS_ADDR_WIDTH     => 64,
       BUS_LEN_WIDTH      => 8,
-      BUS_DATA_WIDTH     => 512,
-      BUS_BURST_STEP_LEN => 1,
+      BUS_DATA_WIDTH     => 64,
+      BUS_BURST_STEP_LEN => 8,
       BUS_BURST_MAX_LEN  => 64,
       INDEX_WIDTH        => 32,
       CFG                => "listprim(8;epc=8)",
