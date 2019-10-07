@@ -43,8 +43,8 @@ entity Mantle is
     wr_mst_wreq_len    : out std_logic_vector(7 downto 0);
     wr_mst_wdat_valid  : out std_logic;
     wr_mst_wdat_ready  : in  std_logic;
-    wr_mst_wdat_data   : out std_logic_vector(63 downto 0);
-    wr_mst_wdat_strobe : out std_logic_vector(7 downto 0);
+    wr_mst_wdat_data   : out std_logic_vector(31 downto 0);
+    wr_mst_wdat_strobe : out std_logic_vector(3 downto 0);
     wr_mst_wdat_last   : out std_logic;
     write_busy         : in  std_logic := '0'
   );
@@ -155,8 +155,8 @@ architecture Implementation of Mantle is
       Result_title_bus_wreq_len    : out std_logic_vector(7 downto 0);
       Result_title_bus_wdat_valid  : out std_logic;
       Result_title_bus_wdat_ready  : in  std_logic;
-      Result_title_bus_wdat_data   : out std_logic_vector(63 downto 0);
-      Result_title_bus_wdat_strobe : out std_logic_vector(7 downto 0);
+      Result_title_bus_wdat_data   : out std_logic_vector(31 downto 0);
+      Result_title_bus_wdat_strobe : out std_logic_vector(3 downto 0);
       Result_title_bus_wdat_last   : out std_logic;
       Result_count_valid           : in  std_logic;
       Result_count_ready           : out std_logic;
@@ -178,8 +178,8 @@ architecture Implementation of Mantle is
       Result_count_bus_wreq_len    : out std_logic_vector(7 downto 0);
       Result_count_bus_wdat_valid  : out std_logic;
       Result_count_bus_wdat_ready  : in  std_logic;
-      Result_count_bus_wdat_data   : out std_logic_vector(63 downto 0);
-      Result_count_bus_wdat_strobe : out std_logic_vector(7 downto 0);
+      Result_count_bus_wdat_data   : out std_logic_vector(31 downto 0);
+      Result_count_bus_wdat_strobe : out std_logic_vector(3 downto 0);
       Result_count_bus_wdat_last   : out std_logic
     );
   end component;
@@ -196,7 +196,7 @@ architecture Implementation of Mantle is
       Stats_stats_ready           : out std_logic;
       Stats_stats_dvalid          : in  std_logic;
       Stats_stats_last            : in  std_logic;
-      Stats_stats                 : in  std_logic_vector(63 downto 0);
+      Stats_stats                 : in  std_logic_vector(31 downto 0);
       Stats_stats_cmd_valid       : in  std_logic;
       Stats_stats_cmd_ready       : out std_logic;
       Stats_stats_cmd_firstIdx    : in  std_logic_vector(31 downto 0);
@@ -212,8 +212,8 @@ architecture Implementation of Mantle is
       Stats_stats_bus_wreq_len    : out std_logic_vector(7 downto 0);
       Stats_stats_bus_wdat_valid  : out std_logic;
       Stats_stats_bus_wdat_ready  : in  std_logic;
-      Stats_stats_bus_wdat_data   : out std_logic_vector(63 downto 0);
-      Stats_stats_bus_wdat_strobe : out std_logic_vector(7 downto 0);
+      Stats_stats_bus_wdat_data   : out std_logic_vector(31 downto 0);
+      Stats_stats_bus_wdat_strobe : out std_logic_vector(3 downto 0);
       Stats_stats_bus_wdat_last   : out std_logic
     );
   end component;
@@ -322,7 +322,7 @@ architecture Implementation of Mantle is
       Stats_stats_ready         : in  std_logic;
       Stats_stats_dvalid        : out std_logic;
       Stats_stats_last          : out std_logic;
-      Stats_stats               : out std_logic_vector(63 downto 0);
+      Stats_stats               : out std_logic_vector(31 downto 0);
       Stats_stats_cmd_valid     : out std_logic;
       Stats_stats_cmd_ready     : in  std_logic;
       Stats_stats_cmd_firstIdx  : out std_logic_vector(31 downto 0);
@@ -390,8 +390,8 @@ architecture Implementation of Mantle is
   signal Result_inst_Result_title_bus_wreq_len    : std_logic_vector(7 downto 0);
   signal Result_inst_Result_title_bus_wdat_valid  : std_logic;
   signal Result_inst_Result_title_bus_wdat_ready  : std_logic;
-  signal Result_inst_Result_title_bus_wdat_data   : std_logic_vector(63 downto 0);
-  signal Result_inst_Result_title_bus_wdat_strobe : std_logic_vector(7 downto 0);
+  signal Result_inst_Result_title_bus_wdat_data   : std_logic_vector(31 downto 0);
+  signal Result_inst_Result_title_bus_wdat_strobe : std_logic_vector(3 downto 0);
   signal Result_inst_Result_title_bus_wdat_last   : std_logic;
   signal Result_inst_Result_count_unl_valid : std_logic;
   signal Result_inst_Result_count_unl_ready : std_logic;
@@ -402,8 +402,8 @@ architecture Implementation of Mantle is
   signal Result_inst_Result_count_bus_wreq_len    : std_logic_vector(7 downto 0);
   signal Result_inst_Result_count_bus_wdat_valid  : std_logic;
   signal Result_inst_Result_count_bus_wdat_ready  : std_logic;
-  signal Result_inst_Result_count_bus_wdat_data   : std_logic_vector(63 downto 0);
-  signal Result_inst_Result_count_bus_wdat_strobe : std_logic_vector(7 downto 0);
+  signal Result_inst_Result_count_bus_wdat_data   : std_logic_vector(31 downto 0);
+  signal Result_inst_Result_count_bus_wdat_strobe : std_logic_vector(3 downto 0);
   signal Result_inst_Result_count_bus_wdat_last   : std_logic;
   signal Stats_inst_Stats_stats_unl_valid : std_logic;
   signal Stats_inst_Stats_stats_unl_ready : std_logic;
@@ -414,8 +414,8 @@ architecture Implementation of Mantle is
   signal Stats_inst_Stats_stats_bus_wreq_len    : std_logic_vector(7 downto 0);
   signal Stats_inst_Stats_stats_bus_wdat_valid  : std_logic;
   signal Stats_inst_Stats_stats_bus_wdat_ready  : std_logic;
-  signal Stats_inst_Stats_stats_bus_wdat_data   : std_logic_vector(63 downto 0);
-  signal Stats_inst_Stats_stats_bus_wdat_strobe : std_logic_vector(7 downto 0);
+  signal Stats_inst_Stats_stats_bus_wdat_data   : std_logic_vector(31 downto 0);
+  signal Stats_inst_Stats_stats_bus_wdat_strobe : std_logic_vector(3 downto 0);
   signal Stats_inst_Stats_stats_bus_wdat_last   : std_logic;
   signal word_match_inst_Pages_title_cmd_valid    : std_logic;
   signal word_match_inst_Pages_title_cmd_ready    : std_logic;
@@ -462,7 +462,7 @@ architecture Implementation of Mantle is
   signal word_match_inst_Stats_stats_ready  : std_logic;
   signal word_match_inst_Stats_stats_dvalid : std_logic;
   signal word_match_inst_Stats_stats_last   : std_logic;
-  signal word_match_inst_Stats_stats        : std_logic_vector(63 downto 0);
+  signal word_match_inst_Stats_stats        : std_logic_vector(31 downto 0);
   signal word_match_inst_Stats_stats_cmd_valid    : std_logic;
   signal word_match_inst_Stats_stats_cmd_ready    : std_logic;
   signal word_match_inst_Stats_stats_cmd_firstIdx : std_logic_vector(31 downto 0);
@@ -797,8 +797,8 @@ begin
     generic map (
       BUS_ADDR_WIDTH   => 64,
       BUS_LEN_WIDTH    => 8,
-      BUS_DATA_WIDTH   => 64,
-      BUS_STROBE_WIDTH => 8,
+      BUS_DATA_WIDTH   => 32,
+      BUS_STROBE_WIDTH => 4,
       ARB_METHOD       => "ROUND-ROBIN",
       MAX_OUTSTANDING  => 4,
       RAM_CONFIG       => "",
@@ -835,17 +835,17 @@ begin
       bsv_wdat_valid(0)               => Result_inst_Result_title_bus_wdat_valid,
       bsv_wdat_valid(1)               => Result_inst_Result_count_bus_wdat_valid,
       bsv_wdat_valid(2)               => Stats_inst_Stats_stats_bus_wdat_valid,
-      bsv_wdat_strobe(7 downto 0)    => Result_inst_Result_title_bus_wdat_strobe,
-      bsv_wdat_strobe(15 downto 8)  => Result_inst_Result_count_bus_wdat_strobe,
-      bsv_wdat_strobe(23 downto 16) => Stats_inst_Stats_stats_bus_wdat_strobe,
+      bsv_wdat_strobe(3 downto 0)     => Result_inst_Result_title_bus_wdat_strobe,
+      bsv_wdat_strobe(7 downto 4)     => Result_inst_Result_count_bus_wdat_strobe,
+      bsv_wdat_strobe(11 downto 8)    => Stats_inst_Stats_stats_bus_wdat_strobe,
       bsv_wdat_ready(0)               => Result_inst_Result_title_bus_wdat_ready,
       bsv_wdat_ready(1)               => Result_inst_Result_count_bus_wdat_ready,
       bsv_wdat_ready(2)               => Stats_inst_Stats_stats_bus_wdat_ready,
       bsv_wdat_last(0)                => Result_inst_Result_title_bus_wdat_last,
       bsv_wdat_last(1)                => Result_inst_Result_count_bus_wdat_last,
       bsv_wdat_last(2)                => Stats_inst_Stats_stats_bus_wdat_last,
-      bsv_wdat_data(63 downto 0)     => Result_inst_Result_title_bus_wdat_data,
-      bsv_wdat_data(127 downto 64)  => Result_inst_Result_count_bus_wdat_data,
-      bsv_wdat_data(191 downto 128) => Stats_inst_Stats_stats_bus_wdat_data
+      bsv_wdat_data(31 downto 0)      => Result_inst_Result_title_bus_wdat_data,
+      bsv_wdat_data(63 downto 32)     => Result_inst_Result_count_bus_wdat_data,
+      bsv_wdat_data(95 downto 64)     => Stats_inst_Stats_stats_bus_wdat_data
     );
 end architecture;

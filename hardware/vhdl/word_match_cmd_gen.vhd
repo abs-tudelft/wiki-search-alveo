@@ -227,7 +227,7 @@ begin
         -- Send statistics write command.
         stats_stats_cmd_valid       <= '1';
         stats_stats_cmd_firstIdx    <= X"00000000";
-        stats_stats_cmd_lastidx     <= X"00000001";
+        stats_stats_cmd_lastidx     <= X"00000002";
         stats_stats_cmd_ctrl        <= mmio_cmd.f_res_stats_addr_data;
         stats_stats_cmd_tag         <= "0";
         stats_wait                  := '1';
