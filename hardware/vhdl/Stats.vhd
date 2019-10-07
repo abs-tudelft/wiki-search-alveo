@@ -48,7 +48,7 @@ begin
       BUS_BURST_STEP_LEN => 4,
       BUS_BURST_MAX_LEN  => 16,
       INDEX_WIDTH        => 32,
-      CFG                => "prim(32)",
+      CFG                => "prim(32;bus_fifo_depth=4)",
       CMD_TAG_ENABLE     => true,
       CMD_TAG_WIDTH      => 1
     )
