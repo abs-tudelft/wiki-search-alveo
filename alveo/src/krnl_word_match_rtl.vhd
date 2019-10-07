@@ -29,7 +29,7 @@ entity krnl_word_match_rtl is
     C_S_AXI_CONTROL_ADDR_WIDTH  : natural := 32;
     C_M_AXI_ID_WIDTH            : natural := 1;
     C_M_AXI_ADDR_WIDTH          : natural := 64;
-    C_M_AXI_DATA_WIDTH          : natural := 512
+    C_M_AXI_DATA_WIDTH          : natural := 64
   );
   port (
     ap_clk                      : in  std_logic;

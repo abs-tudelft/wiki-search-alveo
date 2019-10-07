@@ -89,7 +89,7 @@ entity word_match_filter is
     stats_stats_ready         : in  std_logic;
     stats_stats_dvalid        : out std_logic;
     stats_stats_last          : out std_logic;
-    stats_stats               : out std_logic_vector(63 downto 0)
+    stats_stats               : out std_logic_vector(31 downto 0)
 
   );
 end entity;
@@ -128,7 +128,7 @@ begin
     variable st_valid   : std_logic;
     variable st_dvalid  : std_logic;
     variable st_last    : std_logic;
-    variable st_data    : std_logic_vector(63 downto 0);
+    variable st_data    : std_logic_vector(31 downto 0);
 
     -- Title character stream command:
     --   0-: block input
@@ -142,6 +142,9 @@ begin
     -- Whether we've seen and handled the last transfer yet. When set, we flush
     -- any unused result records and write the statistics.
     variable last_seen  : std_logic;
+
+    -- The index of the statistics word that we have to send next.
+    variable st_index   : std_logic;
 
     -- Total word and page matches for the current command.
     variable word_matches : unsigned(31 downto 0);
@@ -242,7 +245,7 @@ begin
           if r_rem_d2(16) = '1' and r_rem_d2(0) = '0' then
 
             -- Write statistics and terminate values stream.
-            if rtc_valid = '0' and st_valid = '0' then
+            if rtc_valid = '0' and st_valid = '0' and st_index = '0' then
 
               -- Write last value for values stream.
               rtc_valid  := '1';
@@ -251,12 +254,22 @@ begin
               rtc_data   := X"00";
               rtc_count  := "0";
 
-              -- Write statistics to shared memory.
+              -- Write first statistics word to shared memory.
+              st_valid  := '1';
+              st_dvalid := '1';
+              st_last   := '0';
+              st_data   := std_logic_vector(page_matches);
+
+              -- Write the second word next.
+              st_index  := '1';
+
+            elsif st_valid = '0' and st_index = '1' then
+
+              -- Write second statistics word to shared memory.
               st_valid  := '1';
               st_dvalid := '1';
               st_last   := '1';
-              st_data(63 downto 32) := std_logic_vector(word_matches);
-              st_data(31 downto  0) := std_logic_vector(page_matches);
+              st_data   := std_logic_vector(word_matches);
 
               -- Write statistics to MMIO.
               mmio_result.f_num_word_matches_write_data <= std_logic_vector(word_matches);
@@ -265,6 +278,7 @@ begin
               mmio_result.f_num_page_matches_write_enable <= '1';
 
               -- Reset the relevant state for the next command.
+              st_index     := '0';
               last_seen    := '0';
               page_matches := (others => '0');
               word_matches := (others => '0');
@@ -339,6 +353,7 @@ begin
         st_valid      := '0';
         title_cmd     := "00";
         r_rem_d2      := (0 => '0', others => '1');
+        st_index      := '0';
         last_seen     := '0';
         word_matches  := (others => '0');
         page_matches  := (others => '0');

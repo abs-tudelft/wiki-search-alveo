@@ -167,7 +167,7 @@ entity word_match is
     stats_stats_ready         : in  std_logic;
     stats_stats_dvalid        : out std_logic;
     stats_stats_last          : out std_logic;
-    stats_stats               : out std_logic_vector(63 downto 0);
+    stats_stats               : out std_logic_vector(31 downto 0);
 
     -- Command stream.
     stats_stats_cmd_valid     : out std_logic;

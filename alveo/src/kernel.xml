@@ -2,8 +2,8 @@
 <root versionMajor="1" versionMinor="5">
   <kernel name="krnl_word_match_rtl" language="ip" vlnv="tudelft.nl:abs:krnl_word_match_rtl:1.0" attributes="" preferredWorkGroupSizeMultiple="0" workGroupSize="1" debug="true" compileOptions=" -g" profileType="none">
     <ports>
-      <port name="s_axi_control" mode="slave"  range="0x1000"      dataWidth="32"  portType="addressable" base="0x0"/>
-      <port name="m_axi"         mode="master" range="0xFFFFFFFFF" dataWidth="512" portType="addressable" base="0x0"/>
+      <port name="s_axi_control" mode="slave"  range="0x1000"      dataWidth="32" portType="addressable" base="0x0"/>
+      <port name="m_axi"         mode="master" range="0xFFFFFFFFF" dataWidth="64" portType="addressable" base="0x0"/>
     </ports>
     <args>
 
