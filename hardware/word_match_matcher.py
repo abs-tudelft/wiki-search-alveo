@@ -5,11 +5,13 @@ import re
 
 class Matcher:
 
-    def __init__(self, search_data, whole_words=True, debug=False):
+    def __init__(self, search_data, whole_words=True, qualifiers='', debug=False):
         super().__init__()
 
         assert len(search_data) >= 1 and len(search_data) <= 32
-        self._search_data = '?' * (32 - len(search_data)) + search_data
+        self._search_data = '!' * (32 - len(search_data)) + search_data
+        self._search_oom = tuple(map(lambda x: x in '+*', ' ' * (32 - len(qualifiers)) + qualifiers))
+        self._search_zom = tuple(map(lambda x: x == '?*', ' ' * (32 - len(qualifiers)) + qualifiers))
         self._search_first = 32 - len(search_data)
         self._whole_words = whole_words
 
@@ -41,8 +43,23 @@ class Matcher:
             chr_mat[ii] = [True] * 34
             chr_mat[ii][self._search_first] = word_bound
             for mi in range(self._search_first, 32):
-                if ii >= count or chars[ii] != self._search_data[mi]:
+                if ii >= count:
                     chr_mat[ii][mi+1] = False
+                if ord(self._search_data[mi]) < 16:
+                    # always match
+                    pass
+                elif ord(self._search_data[mi]) < 24:
+                    # match letters
+                    if word_bound:
+                        chr_mat[ii][mi+1] = False
+                elif ord(self._search_data[mi]) < 32:
+                    # match non-letters
+                    if not word_bound:
+                        chr_mat[ii][mi+1] = False
+                else:
+                    # match exactly
+                    if chars[ii] != self._search_data[mi]:
+                        chr_mat[ii][mi+1] = False
             if ii < count:
                 chr_mat[ii][33] = word_bound
 
@@ -54,10 +71,14 @@ class Matcher:
             #for ci in range(0, self._search_first+1):
                 #self._win_mat[ci] = True
         self._win_mat = [True] * 8 + self._win_mat[:-8]
-        for ci in range(41):
-            for ii in range(8):
+        for ii in range(8):
+            for ci in range(41):
                 for mi in range(34):
                     if ci == mi + 7 - ii:
+                        if ci < 40 and mi > 0 and mi < 33 and self._search_oom[mi - 1]:
+                            self._win_mat[ci] = self._win_mat[ci] or self._win_mat[ci + 1]
+                        #if ci > 0 and mi > 0 and mi < 33 and self._search_zom[mi - 1]:
+                            #self._win_mat[ci] = self._win_mat[ci] or self._win_mat[ci - 1]
                         self._win_mat[ci] = self._win_mat[ci] and chr_mat[ii][mi]
 
         self._first = last
@@ -99,14 +120,19 @@ def get_num_matches(pat, data):
             amount += 1
     return amount
 
-def check(pat, data, whole_words=True):
-    actual = Matcher(pat, whole_words).check(data)
-
-    if whole_words:
-        # NOTE: this is only valid when the only word boundary is a space.
-        expected = get_num_matches(' ' + pat + ' ', ' ' + data + ' ')
+def check(pat, data, whole_words=True, expected=None):
+    if isinstance(pat, tuple):
+        pat, qual = pat
     else:
-        expected = get_num_matches(pat, data)
+        qual = ''
+    actual = Matcher(pat, whole_words, qualifiers=qual).check(data)
+
+    if expected is None:
+        if whole_words:
+            # NOTE: this is only valid when the only word boundary is a space.
+            expected = get_num_matches(' ' + pat + ' ', ' ' + data + ' ')
+        else:
+            expected = get_num_matches(pat, data)
 
     if actual != expected:
         Matcher(pat, whole_words, debug=True).check(data)
@@ -115,6 +141,7 @@ def check(pat, data, whole_words=True):
         assert False
 
 
+# test start of string corner cases
 check('test', 'test test 1 two three banana triangle', 0)
 check(' test', 'test test 1 two three banana triangle', 0)
 check(' test', ' test test 1 two three banana triangle', 0)
@@ -124,6 +151,7 @@ check(' test', 'test test 1 two three banana triangle', 1)
 check(' test', ' test test 1 two three banana triangle', 1)
 check('xtest', ' test test 1 two three banana triangle', 1)
 
+# test end of string corner cases
 check('triangle', 'test test 1 two three banana triangle', 0)
 check('triangle ', 'test test 1 two three banana triangle', 0)
 check('triangle ', 'test test 1 two three banana triangle ', 0)
@@ -133,9 +161,20 @@ check('triangle ', 'test test 1 two three banana triangle', 1)
 check('triangle ', 'test test 1 two three banana triangle ', 1)
 check('trianglex', 'test test 1 two three banana triangle', 1)
 
+# test long matches
 check('a', 'test test 1 two three banana triangle', 0)
 check('a', 'test test 1 two three banana triangle', 1)
 check('test test 1 two three banana', 'test test 1 two three banana triangle', 1)
+
+# test qualifiers
+check(('h\0llo', '     '), 'hello hallo haaaallo', 0, expected=2)
+check(('h\0llo', ' +   '), 'hello hallo haallo', 0, expected=3)
+check(('h\0llo', ' +   '), 'hello hallo haaaaaaaaaaaaaaaaaallo', 0, expected=3)
+check(('h\0llo', ' +   '), 'hello hallo haaaaaaaaaaaaaaaaaallollo', 0, expected=4)
+check(('h\0llo', ' +   '), 'hello hallo haaaahaaaaaaaaaaaaallollo', 0, expected=4)
+check(('h\0llo', ' +   '), 'hllo hello hallo', 0, expected=2)
+check(('halo', ' ++ '), 'hello hallo haalo haelo', 0, expected=2)
+#check(('hello', '  ?  '), 'helo', 0, expected=1)
 
 check('test', 'hello test there testest', 0)
 
