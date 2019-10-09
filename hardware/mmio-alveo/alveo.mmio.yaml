@@ -357,3 +357,39 @@ fields:
       Number of cycles taken by the last command.
     behavior: latching
     group: result
+
+  - address: 0x98
+    register-name: debug
+    register-brief: various debug bits.
+    behavior: status
+    subfields:
+
+      - group: dbg_filt
+        subfields:
+          - bitrange: 16..0
+            name: dbg_filt_r_rem_d2
+          - bitrange: 17
+            name: dbg_filt_busy
+          - bitrange: 18
+            name: dbg_filt_last_seen
+          - bitrange: 20..19
+            name: dbg_filt_st_index
+          - bitrange: 22..21
+            name: dbg_filt_title_cmd
+
+      - group: dbg_cmd
+        subfields:
+          - bitrange: 23
+            name: dbg_cmd_busy_r
+          - bitrange: 24
+            name: dbg_cmd_pages_title_wait
+          - bitrange: 25
+            name: dbg_cmd_pages_text_wait
+          - bitrange: 26
+            name: dbg_cmd_result_title_wait
+          - bitrange: 27
+            name: dbg_cmd_result_count_wait
+          - bitrange: 28
+            name: dbg_cmd_stats_wait
+          - bitrange: 33..29
+            name: dbg_cmd_timer

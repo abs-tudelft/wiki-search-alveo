@@ -18,6 +18,7 @@ entity word_match_filter is
     mmio_start                : in  std_logic;
     mmio_cfg                  : in  mmio_g_cfg_o_type;
     mmio_result               : out mmio_g_result_i_type;
+    mmio_dbg_filt             : out mmio_g_dbg_filt_i_type;
 
     ---------------------------------------------------------------------------
     -- Command generator interface.
@@ -376,7 +377,7 @@ begin
             end if;
           end if;
         when others => -- idle
-          null;
+          title_cmd := "00";
       end case;
 
       -- Initialize the result record remaining counter when the command
@@ -437,6 +438,13 @@ begin
       stats_stats_dvalid        <= st_dvalid;
       stats_stats_last          <= st_last;
       stats_stats               <= st_data;
+
+      -- Assign debug signal.
+      mmio_dbg_filt.f_dbg_filt_r_rem_d2_write_data <= std_logic_vector(r_rem_d2);
+      mmio_dbg_filt.f_dbg_filt_busy_write_data <= busy;
+      mmio_dbg_filt.f_dbg_filt_last_seen_write_data <= last_seen;
+      mmio_dbg_filt.f_dbg_filt_st_index_write_data <= std_logic_vector(st_index);
+      mmio_dbg_filt.f_dbg_filt_title_cmd_write_data <= title_cmd;
 
     end if;
   end process;

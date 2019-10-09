@@ -17,6 +17,7 @@ entity word_match_cmd_gen is
     -- MMIO register interface.
     mmio_cmd                  : in  mmio_g_cmd_o_type;
     mmio_stat                 : out mmio_g_stat_i_type;
+    mmio_dbg_cmd              : out mmio_g_dbg_cmd_i_type;
 
     -- Command signal to the filter unit to indicate how many result records
     -- are expected.
@@ -266,6 +267,15 @@ begin
       result_title_unl_ready  <= result_title_wait;
       result_count_unl_ready  <= result_count_wait;
       stats_stats_unl_ready   <= stats_wait;
+
+      -- Assign debug register signals.
+      mmio_dbg_cmd.f_dbg_cmd_busy_r_write_data <= busy_r;
+      mmio_dbg_cmd.f_dbg_cmd_pages_title_wait_write_data <= pages_title_wait;
+      mmio_dbg_cmd.f_dbg_cmd_pages_text_wait_write_data <= pages_text_wait;
+      mmio_dbg_cmd.f_dbg_cmd_result_title_wait_write_data <= result_title_wait;
+      mmio_dbg_cmd.f_dbg_cmd_result_count_wait_write_data <= result_count_wait;
+      mmio_dbg_cmd.f_dbg_cmd_stats_wait_write_data <= stats_wait;
+      mmio_dbg_cmd.f_dbg_cmd_timer_write_data <= std_logic_vector(timer);
 
       -- Save busy for the next cycle.
       busy_r := busy;

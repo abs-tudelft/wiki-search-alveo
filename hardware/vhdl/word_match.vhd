@@ -199,6 +199,8 @@ architecture Implementation of word_match is
   signal mmio_stat              : mmio_g_stat_i_type;
   signal mmio_result            : mmio_g_result_i_type;
   signal mmio_cfg               : mmio_g_cfg_o_type;
+  signal mmio_dbg_filt          : mmio_g_dbg_filt_i_type;
+  signal mmio_dbg_cmd           : mmio_g_dbg_cmd_i_type;
 
   -- Decompressed article text stream.
   signal pages_text_chars_valid : std_logic;
@@ -229,6 +231,8 @@ begin
       g_stat_i                  => mmio_stat,
       g_result_i                => mmio_result,
       g_cfg_o                   => mmio_cfg,
+      g_dbg_filt_i              => mmio_dbg_filt,
+      g_dbg_cmd_i               => mmio_dbg_cmd,
       mmio_awvalid              => mmio_awvalid,
       mmio_awready              => mmio_awready,
       mmio_awaddr               => mmio_awaddr,
@@ -258,6 +262,7 @@ begin
       reset                     => kcd_reset,
       mmio_cmd                  => mmio_cmd,
       mmio_stat                 => mmio_stat,
+      mmio_dbg_cmd              => mmio_dbg_cmd,
       filter_result_valid       => filter_result_valid,
       filter_result_count       => filter_result_count,
       pages_title_cmd_valid     => pages_title_cmd_valid,
@@ -357,6 +362,7 @@ begin
       mmio_start                => mmio_cmd.s_start,
       mmio_cfg                  => mmio_cfg,
       mmio_result               => mmio_result,
+      mmio_dbg_filt             => mmio_dbg_filt,
       filter_result_valid       => filter_result_valid,
       filter_result_count       => filter_result_count,
       pages_title_valid         => pages_title_valid,

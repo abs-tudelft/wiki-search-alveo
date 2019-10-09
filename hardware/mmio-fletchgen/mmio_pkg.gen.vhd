@@ -83,6 +83,38 @@ package mmio_pkg is
     f_whole_words_data => '0',
     f_min_matches_data => (others => '0')
   );
+  type mmio_g_dbg_filt_i_type is record
+    f_dbg_filt_r_rem_d2_write_data : std_logic_vector(16 downto 0);
+    f_dbg_filt_busy_write_data : std_logic;
+    f_dbg_filt_last_seen_write_data : std_logic;
+    f_dbg_filt_st_index_write_data : std_logic_vector(1 downto 0);
+    f_dbg_filt_title_cmd_write_data : std_logic_vector(1 downto 0);
+  end record;
+  constant MMIO_G_DBG_FILT_I_RESET : mmio_g_dbg_filt_i_type := (
+    f_dbg_filt_r_rem_d2_write_data => (others => '0'),
+    f_dbg_filt_busy_write_data => '0',
+    f_dbg_filt_last_seen_write_data => '0',
+    f_dbg_filt_st_index_write_data => (others => '0'),
+    f_dbg_filt_title_cmd_write_data => (others => '0')
+  );
+  type mmio_g_dbg_cmd_i_type is record
+    f_dbg_cmd_busy_r_write_data : std_logic;
+    f_dbg_cmd_pages_title_wait_write_data : std_logic;
+    f_dbg_cmd_pages_text_wait_write_data : std_logic;
+    f_dbg_cmd_result_title_wait_write_data : std_logic;
+    f_dbg_cmd_result_count_wait_write_data : std_logic;
+    f_dbg_cmd_stats_wait_write_data : std_logic;
+    f_dbg_cmd_timer_write_data : std_logic_vector(4 downto 0);
+  end record;
+  constant MMIO_G_DBG_CMD_I_RESET : mmio_g_dbg_cmd_i_type := (
+    f_dbg_cmd_busy_r_write_data => '0',
+    f_dbg_cmd_pages_title_wait_write_data => '0',
+    f_dbg_cmd_pages_text_wait_write_data => '0',
+    f_dbg_cmd_result_title_wait_write_data => '0',
+    f_dbg_cmd_result_count_wait_write_data => '0',
+    f_dbg_cmd_stats_wait_write_data => '0',
+    f_dbg_cmd_timer_write_data => (others => '0')
+  );
   type mmio_g_stat_i_type is record
     s_starting : std_logic;
     s_done : std_logic;
@@ -156,6 +188,24 @@ package mmio_pkg is
       --  - field whole_words: When set, interpunction/spacing must exist before
       --    and after the word for it to match.
       g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
+
+      -- Interface group for:
+      --  - field dbg_filt_busy: dbg_filt_busy.
+      --  - field dbg_filt_last_seen: dbg_filt_last_seen.
+      --  - field dbg_filt_r_rem_d2: dbg_filt_r_rem_d2.
+      --  - field dbg_filt_st_index: dbg_filt_st_index.
+      --  - field dbg_filt_title_cmd: dbg_filt_title_cmd.
+      g_dbg_filt_i : in mmio_g_dbg_filt_i_type := MMIO_G_DBG_FILT_I_RESET;
+
+      -- Interface group for:
+      --  - field dbg_cmd_busy_r: dbg_cmd_busy_r.
+      --  - field dbg_cmd_pages_text_wait: dbg_cmd_pages_text_wait.
+      --  - field dbg_cmd_pages_title_wait: dbg_cmd_pages_title_wait.
+      --  - field dbg_cmd_result_count_wait: dbg_cmd_result_count_wait.
+      --  - field dbg_cmd_result_title_wait: dbg_cmd_result_title_wait.
+      --  - field dbg_cmd_stats_wait: dbg_cmd_stats_wait.
+      --  - field dbg_cmd_timer: dbg_cmd_timer.
+      g_dbg_cmd_i : in mmio_g_dbg_cmd_i_type := MMIO_G_DBG_CMD_I_RESET;
 
       -- Interface group for:
       --  - strobe port for internal signal done.

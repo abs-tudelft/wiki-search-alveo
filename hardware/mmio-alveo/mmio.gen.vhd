@@ -63,6 +63,24 @@ entity mmio is
     g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
 
     -- Interface group for:
+    --  - field dbg_filt_busy: dbg_filt_busy.
+    --  - field dbg_filt_last_seen: dbg_filt_last_seen.
+    --  - field dbg_filt_r_rem_d2: dbg_filt_r_rem_d2.
+    --  - field dbg_filt_st_index: dbg_filt_st_index.
+    --  - field dbg_filt_title_cmd: dbg_filt_title_cmd.
+    g_dbg_filt_i : in mmio_g_dbg_filt_i_type := MMIO_G_DBG_FILT_I_RESET;
+
+    -- Interface group for:
+    --  - field dbg_cmd_busy_r: dbg_cmd_busy_r.
+    --  - field dbg_cmd_pages_text_wait: dbg_cmd_pages_text_wait.
+    --  - field dbg_cmd_pages_title_wait: dbg_cmd_pages_title_wait.
+    --  - field dbg_cmd_result_count_wait: dbg_cmd_result_count_wait.
+    --  - field dbg_cmd_result_title_wait: dbg_cmd_result_title_wait.
+    --  - field dbg_cmd_stats_wait: dbg_cmd_stats_wait.
+    --  - field dbg_cmd_timer: dbg_cmd_timer.
+    g_dbg_cmd_i : in mmio_g_dbg_cmd_i_type := MMIO_G_DBG_CMD_I_RESET;
+
+    -- Interface group for:
     --  - strobe port for internal signal done.
     --  - strobe port for internal signal starting.
     g_stat_i : in mmio_g_stat_i_type := MMIO_G_STAT_I_RESET;
@@ -629,15 +647,177 @@ begin
     variable f_cycle_count_r : f_cycle_count_r_array(0 to 0)
         := (others => F_CYCLE_COUNT_R_RESET);
 
+    -- Private declarations for field dbg_filt_r_rem_d2: dbg_filt_r_rem_d2.
+    type f_dbg_filt_r_rem_d2_r_type is record
+      d : std_logic_vector(16 downto 0);
+      v : std_logic;
+    end record;
+    constant F_DBG_FILT_R_REM_D2_R_RESET : f_dbg_filt_r_rem_d2_r_type := (
+      d => (others => '0'),
+      v => '0'
+    );
+    type f_dbg_filt_r_rem_d2_r_array is array (natural range <>) of f_dbg_filt_r_rem_d2_r_type;
+    variable f_dbg_filt_r_rem_d2_r : f_dbg_filt_r_rem_d2_r_array(0 to 0)
+        := (others => F_DBG_FILT_R_REM_D2_R_RESET);
+
+    -- Private declarations for field dbg_filt_busy: dbg_filt_busy.
+    type f_dbg_filt_busy_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_FILT_BUSY_R_RESET : f_dbg_filt_busy_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_filt_busy_r_array is array (natural range <>) of f_dbg_filt_busy_r_type;
+    variable f_dbg_filt_busy_r : f_dbg_filt_busy_r_array(0 to 0)
+        := (others => F_DBG_FILT_BUSY_R_RESET);
+
+    -- Private declarations for field dbg_filt_last_seen: dbg_filt_last_seen.
+    type f_dbg_filt_last_seen_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_FILT_LAST_SEEN_R_RESET : f_dbg_filt_last_seen_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_filt_last_seen_r_array is array (natural range <>) of f_dbg_filt_last_seen_r_type;
+    variable f_dbg_filt_last_seen_r : f_dbg_filt_last_seen_r_array(0 to 0)
+        := (others => F_DBG_FILT_LAST_SEEN_R_RESET);
+
+    -- Private declarations for field dbg_filt_st_index: dbg_filt_st_index.
+    type f_dbg_filt_st_index_r_type is record
+      d : std_logic_vector(1 downto 0);
+      v : std_logic;
+    end record;
+    constant F_DBG_FILT_ST_INDEX_R_RESET : f_dbg_filt_st_index_r_type := (
+      d => (others => '0'),
+      v => '0'
+    );
+    type f_dbg_filt_st_index_r_array is array (natural range <>) of f_dbg_filt_st_index_r_type;
+    variable f_dbg_filt_st_index_r : f_dbg_filt_st_index_r_array(0 to 0)
+        := (others => F_DBG_FILT_ST_INDEX_R_RESET);
+
+    -- Private declarations for field dbg_filt_title_cmd: dbg_filt_title_cmd.
+    type f_dbg_filt_title_cmd_r_type is record
+      d : std_logic_vector(1 downto 0);
+      v : std_logic;
+    end record;
+    constant F_DBG_FILT_TITLE_CMD_R_RESET : f_dbg_filt_title_cmd_r_type := (
+      d => (others => '0'),
+      v => '0'
+    );
+    type f_dbg_filt_title_cmd_r_array is array (natural range <>) of f_dbg_filt_title_cmd_r_type;
+    variable f_dbg_filt_title_cmd_r : f_dbg_filt_title_cmd_r_array(0 to 0)
+        := (others => F_DBG_FILT_TITLE_CMD_R_RESET);
+
+    -- Private declarations for field dbg_cmd_busy_r: dbg_cmd_busy_r.
+    type f_dbg_cmd_busy_r_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_CMD_BUSY_R_R_RESET : f_dbg_cmd_busy_r_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_cmd_busy_r_r_array is array (natural range <>) of f_dbg_cmd_busy_r_r_type;
+    variable f_dbg_cmd_busy_r_r : f_dbg_cmd_busy_r_r_array(0 to 0)
+        := (others => F_DBG_CMD_BUSY_R_R_RESET);
+
+    -- Private declarations for field dbg_cmd_pages_title_wait:
+    -- dbg_cmd_pages_title_wait.
+    type f_dbg_cmd_pages_title_wait_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_CMD_PAGES_TITLE_WAIT_R_RESET : f_dbg_cmd_pages_title_wait_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_cmd_pages_title_wait_r_array is array (natural range <>) of f_dbg_cmd_pages_title_wait_r_type;
+    variable f_dbg_cmd_pages_title_wait_r : f_dbg_cmd_pages_title_wait_r_array(0 to 0)
+        := (others => F_DBG_CMD_PAGES_TITLE_WAIT_R_RESET);
+
+    -- Private declarations for field dbg_cmd_pages_text_wait:
+    -- dbg_cmd_pages_text_wait.
+    type f_dbg_cmd_pages_text_wait_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_CMD_PAGES_TEXT_WAIT_R_RESET : f_dbg_cmd_pages_text_wait_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_cmd_pages_text_wait_r_array is array (natural range <>) of f_dbg_cmd_pages_text_wait_r_type;
+    variable f_dbg_cmd_pages_text_wait_r : f_dbg_cmd_pages_text_wait_r_array(0 to 0)
+        := (others => F_DBG_CMD_PAGES_TEXT_WAIT_R_RESET);
+
+    -- Private declarations for field dbg_cmd_result_title_wait:
+    -- dbg_cmd_result_title_wait.
+    type f_dbg_cmd_result_title_wait_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_CMD_RESULT_TITLE_WAIT_R_RESET : f_dbg_cmd_result_title_wait_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_cmd_result_title_wait_r_array is array (natural range <>) of f_dbg_cmd_result_title_wait_r_type;
+    variable f_dbg_cmd_result_title_wait_r : f_dbg_cmd_result_title_wait_r_array(0 to 0)
+        := (others => F_DBG_CMD_RESULT_TITLE_WAIT_R_RESET);
+
+    -- Private declarations for field dbg_cmd_result_count_wait:
+    -- dbg_cmd_result_count_wait.
+    type f_dbg_cmd_result_count_wait_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_CMD_RESULT_COUNT_WAIT_R_RESET : f_dbg_cmd_result_count_wait_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_cmd_result_count_wait_r_array is array (natural range <>) of f_dbg_cmd_result_count_wait_r_type;
+    variable f_dbg_cmd_result_count_wait_r : f_dbg_cmd_result_count_wait_r_array(0 to 0)
+        := (others => F_DBG_CMD_RESULT_COUNT_WAIT_R_RESET);
+
+    -- Private declarations for field dbg_cmd_stats_wait: dbg_cmd_stats_wait.
+    type f_dbg_cmd_stats_wait_r_type is record
+      d : std_logic;
+      v : std_logic;
+    end record;
+    constant F_DBG_CMD_STATS_WAIT_R_RESET : f_dbg_cmd_stats_wait_r_type := (
+      d => '0',
+      v => '0'
+    );
+    type f_dbg_cmd_stats_wait_r_array is array (natural range <>) of f_dbg_cmd_stats_wait_r_type;
+    variable f_dbg_cmd_stats_wait_r : f_dbg_cmd_stats_wait_r_array(0 to 0)
+        := (others => F_DBG_CMD_STATS_WAIT_R_RESET);
+
+    -- Private declarations for field dbg_cmd_timer: dbg_cmd_timer.
+    type f_dbg_cmd_timer_r_type is record
+      d : std_logic_vector(4 downto 0);
+      v : std_logic;
+    end record;
+    constant F_DBG_CMD_TIMER_R_RESET : f_dbg_cmd_timer_r_type := (
+      d => (others => '0'),
+      v => '0'
+    );
+    type f_dbg_cmd_timer_r_array is array (natural range <>) of f_dbg_cmd_timer_r_type;
+    variable f_dbg_cmd_timer_r : f_dbg_cmd_timer_r_array(0 to 0)
+        := (others => F_DBG_CMD_TIMER_R_RESET);
+
     -- Temporary variables for the field templates.
     variable tmp_data    : std_logic;
     variable tmp_strb    : std_logic;
+    variable tmp_data2   : std_logic_vector(1 downto 0);
     variable tmp_data5   : std_logic_vector(4 downto 0);
     variable tmp_strb5   : std_logic_vector(4 downto 0);
     variable tmp_data8   : std_logic_vector(7 downto 0);
     variable tmp_strb8   : std_logic_vector(7 downto 0);
     variable tmp_data16  : std_logic_vector(15 downto 0);
     variable tmp_strb16  : std_logic_vector(15 downto 0);
+    variable tmp_data17  : std_logic_vector(16 downto 0);
     variable tmp_data20  : std_logic_vector(19 downto 0);
     variable tmp_data32  : std_logic_vector(31 downto 0);
     variable tmp_strb32  : std_logic_vector(31 downto 0);
@@ -835,6 +1015,91 @@ begin
       if g_result_i.f_cycle_count_write_enable = '1' then
         f_cycle_count_r((0)).d := g_result_i.f_cycle_count_write_data;
       end if;
+
+      -- Pre-bus logic for field dbg_filt_r_rem_d2: dbg_filt_r_rem_d2.
+
+      -- Handle hardware write for field dbg_filt_r_rem_d2: status.
+      f_dbg_filt_r_rem_d2_r((0)).d
+          := g_dbg_filt_i.f_dbg_filt_r_rem_d2_write_data;
+      f_dbg_filt_r_rem_d2_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_filt_busy: dbg_filt_busy.
+
+      -- Handle hardware write for field dbg_filt_busy: status.
+      f_dbg_filt_busy_r((0)).d := g_dbg_filt_i.f_dbg_filt_busy_write_data;
+      f_dbg_filt_busy_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_filt_last_seen: dbg_filt_last_seen.
+
+      -- Handle hardware write for field dbg_filt_last_seen: status.
+      f_dbg_filt_last_seen_r((0)).d
+          := g_dbg_filt_i.f_dbg_filt_last_seen_write_data;
+      f_dbg_filt_last_seen_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_filt_st_index: dbg_filt_st_index.
+
+      -- Handle hardware write for field dbg_filt_st_index: status.
+      f_dbg_filt_st_index_r((0)).d
+          := g_dbg_filt_i.f_dbg_filt_st_index_write_data;
+      f_dbg_filt_st_index_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_filt_title_cmd: dbg_filt_title_cmd.
+
+      -- Handle hardware write for field dbg_filt_title_cmd: status.
+      f_dbg_filt_title_cmd_r((0)).d
+          := g_dbg_filt_i.f_dbg_filt_title_cmd_write_data;
+      f_dbg_filt_title_cmd_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_cmd_busy_r: dbg_cmd_busy_r.
+
+      -- Handle hardware write for field dbg_cmd_busy_r: status.
+      f_dbg_cmd_busy_r_r((0)).d := g_dbg_cmd_i.f_dbg_cmd_busy_r_write_data;
+      f_dbg_cmd_busy_r_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_cmd_pages_title_wait:
+      -- dbg_cmd_pages_title_wait.
+
+      -- Handle hardware write for field dbg_cmd_pages_title_wait: status.
+      f_dbg_cmd_pages_title_wait_r((0)).d
+          := g_dbg_cmd_i.f_dbg_cmd_pages_title_wait_write_data;
+      f_dbg_cmd_pages_title_wait_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_cmd_pages_text_wait:
+      -- dbg_cmd_pages_text_wait.
+
+      -- Handle hardware write for field dbg_cmd_pages_text_wait: status.
+      f_dbg_cmd_pages_text_wait_r((0)).d
+          := g_dbg_cmd_i.f_dbg_cmd_pages_text_wait_write_data;
+      f_dbg_cmd_pages_text_wait_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_cmd_result_title_wait:
+      -- dbg_cmd_result_title_wait.
+
+      -- Handle hardware write for field dbg_cmd_result_title_wait: status.
+      f_dbg_cmd_result_title_wait_r((0)).d
+          := g_dbg_cmd_i.f_dbg_cmd_result_title_wait_write_data;
+      f_dbg_cmd_result_title_wait_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_cmd_result_count_wait:
+      -- dbg_cmd_result_count_wait.
+
+      -- Handle hardware write for field dbg_cmd_result_count_wait: status.
+      f_dbg_cmd_result_count_wait_r((0)).d
+          := g_dbg_cmd_i.f_dbg_cmd_result_count_wait_write_data;
+      f_dbg_cmd_result_count_wait_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_cmd_stats_wait: dbg_cmd_stats_wait.
+
+      -- Handle hardware write for field dbg_cmd_stats_wait: status.
+      f_dbg_cmd_stats_wait_r((0)).d
+          := g_dbg_cmd_i.f_dbg_cmd_stats_wait_write_data;
+      f_dbg_cmd_stats_wait_r((0)).v := '1';
+
+      -- Pre-bus logic for field dbg_cmd_timer: dbg_cmd_timer.
+
+      -- Handle hardware write for field dbg_cmd_timer: status.
+      f_dbg_cmd_timer_r((0)).d := g_dbg_cmd_i.f_dbg_cmd_timer_write_data;
+      f_dbg_cmd_timer_r((0)).v := '1';
 
       -------------------------------------------------------------------------
       -- Bus read logic
@@ -2571,7 +2836,7 @@ begin
 
           end if;
 
-        when others => -- "100101"
+        when "100101" =>
           -- r_addr = 000000000000000000000000100101--
 
           if r_req then
@@ -2603,6 +2868,238 @@ begin
           if r_req then
 
             r_data := r_hold(31 downto 0);
+            r_multi := '0';
+
+          end if;
+
+        when "100110" =>
+          -- r_addr = 000000000000000000000000100110--
+
+          if r_req then
+
+            -- Clear holding register location prior to read.
+            r_hold := (others => '0');
+
+          end if;
+
+          -- Read logic for field dbg_filt_r_rem_d2: dbg_filt_r_rem_d2.
+
+          if r_req then
+            tmp_data17 := r_hold(16 downto 0);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data17 := f_dbg_filt_r_rem_d2_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(16 downto 0) := tmp_data17;
+          end if;
+
+          -- Read logic for field dbg_filt_busy: dbg_filt_busy.
+
+          if r_req then
+            tmp_data := r_hold(17);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_filt_busy_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(17) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_filt_last_seen: dbg_filt_last_seen.
+
+          if r_req then
+            tmp_data := r_hold(18);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_filt_last_seen_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(18) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_filt_st_index: dbg_filt_st_index.
+
+          if r_req then
+            tmp_data2 := r_hold(20 downto 19);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data2 := f_dbg_filt_st_index_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(20 downto 19) := tmp_data2;
+          end if;
+
+          -- Read logic for field dbg_filt_title_cmd: dbg_filt_title_cmd.
+
+          if r_req then
+            tmp_data2 := r_hold(22 downto 21);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data2 := f_dbg_filt_title_cmd_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(22 downto 21) := tmp_data2;
+          end if;
+
+          -- Read logic for field dbg_cmd_busy_r: dbg_cmd_busy_r.
+
+          if r_req then
+            tmp_data := r_hold(23);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_cmd_busy_r_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(23) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_cmd_pages_title_wait:
+          -- dbg_cmd_pages_title_wait.
+
+          if r_req then
+            tmp_data := r_hold(24);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_cmd_pages_title_wait_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(24) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_cmd_pages_text_wait:
+          -- dbg_cmd_pages_text_wait.
+
+          if r_req then
+            tmp_data := r_hold(25);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_cmd_pages_text_wait_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(25) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_cmd_result_title_wait:
+          -- dbg_cmd_result_title_wait.
+
+          if r_req then
+            tmp_data := r_hold(26);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_cmd_result_title_wait_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(26) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_cmd_result_count_wait:
+          -- dbg_cmd_result_count_wait.
+
+          if r_req then
+            tmp_data := r_hold(27);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_cmd_result_count_wait_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(27) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_cmd_stats_wait: dbg_cmd_stats_wait.
+
+          if r_req then
+            tmp_data := r_hold(28);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data := f_dbg_cmd_stats_wait_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(28) := tmp_data;
+          end if;
+
+          -- Read logic for field dbg_cmd_timer: dbg_cmd_timer.
+
+          if r_req then
+            tmp_data5 := r_hold(33 downto 29);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data5 := f_dbg_cmd_timer_r((0)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(33 downto 29) := tmp_data5;
+          end if;
+
+          -- Read logic for block debug_low: block containing bits 31..0 of
+          -- register `debug` (`DEBUG`).
+          if r_req then
+
+            r_data := r_hold(31 downto 0);
+            r_multi := '1';
+
+          end if;
+
+        when others => -- "100111"
+          -- r_addr = 000000000000000000000000100111--
+
+          -- Read logic for block debug_high: block containing bits 63..32 of
+          -- register `debug` (`DEBUG`).
+          if r_req then
+
+            r_data := r_hold(63 downto 32);
+            if r_multi = '1' then
+              r_ack := true;
+            else
+              r_nack := true;
+            end if;
             r_multi := '0';
 
           end if;
