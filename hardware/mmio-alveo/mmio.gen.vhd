@@ -896,7 +896,7 @@ begin
           if r_req then
 
             -- Regular access logic.
-            tmp_data := f_idle_r((0)).busy;
+            tmp_data := not f_idle_r((0)).busy;
             r_ack := true;
 
           end if;

@@ -119,7 +119,7 @@ fields:
             $s.busy$ := '0';
           end if;
         read: |
-          $data$ := $s.busy$;
+          $data$ := not $s.busy$;
           $ack$ := true;
         post-access: |
           if reset = '1' then
