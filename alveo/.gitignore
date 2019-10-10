@@ -6,4 +6,10 @@ host
 /xclbin/
 /_x/
 /all-sources/
-
+*.csv
+/.run/
+emconfig.json
+*.protoinst
+*.wcfg
+*.wdb
+/xsim.dir/
