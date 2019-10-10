@@ -199,7 +199,7 @@ public:
             }
             printf("  Device %u: %s", i, param);
             if (device == NULL) {
-                xclbin_fname = bin_prefix + ".hw." + param + ".xclbin";
+                xclbin_fname = bin_prefix + "." + param + ".xclbin";
                 if (device == NULL && access(xclbin_fname.c_str(), F_OK) != -1) {
                     printf(" <--");
                     device = devices[i];
@@ -270,8 +270,7 @@ public:
             instances.push_back(std::make_shared<AlveoKernelInstance>(
                 subdevices[i], program, kernel_name));
         }
-        printf("Found %u kernel instances\n", num_subdevices);
-
+        printf("Found %u kernel instances.\n\n", num_subdevices);
 
     }
 
@@ -565,6 +564,46 @@ public:
 };
 
 /**
+ * XRT likes to spam error messages to stdout in addition to setting the OpenCL
+ * result to the appropriate code. Unfortunately, there currently does not
+ * appear to be a way to query bank connectivity for a kernel, so the only way
+ * is to hardcode the connectivity or try until success. We opt for the latter.
+ * To suppress the error messages we use this piece of work, which redirects
+ * stdout to /dev/null for the lifetime of the object.
+ */
+class StdoutSuppressor {
+private:
+    int real_stdout;
+public:
+    StdoutSuppressor() {
+        fflush(stdout);
+        real_stdout = dup(1);
+        int dev_null = open("/dev/null", O_WRONLY);
+        dup2(dev_null, 1);
+        close(dev_null);
+    }
+
+    ~StdoutSuppressor() {
+        fflush(stdout);
+        dup2(real_stdout, 1);
+        close(real_stdout);
+    }
+};
+
+/**
+ * Class used internally by WordMatch to keep track of the buffers for a given
+ * record batch.
+ */
+class WordMatchDataset {
+public:
+    std::shared_ptr<AlveoBuffer> title_offset;
+    std::shared_ptr<AlveoBuffer> title_values;
+    std::shared_ptr<AlveoBuffer> text_offset;
+    std::shared_ptr<AlveoBuffer> text_values;
+    unsigned int num_rows;
+};
+
+/**
  * Manages a word matcher kernel, operating on a fixed record batch that is
  * only loaded once.
  */
@@ -573,12 +612,10 @@ private:
 
     AlveoKernelInstance &context;
     unsigned int num_results;
+    int bank;
 
     // Input buffers.
-    std::shared_ptr<AlveoBuffer> title_offset;
-    std::shared_ptr<AlveoBuffer> title_values;
-    std::shared_ptr<AlveoBuffer> text_offset;
-    std::shared_ptr<AlveoBuffer> text_values;
+    std::vector<WordMatchDataset> datasets;
 
     // Result buffers.
     std::shared_ptr<AlveoBuffer> result_title_offset;
@@ -594,9 +631,46 @@ private:
 
 public:
 
-    WordMatch(AlveoKernelInstance &context, int bank, const std::string &fname, int num_results = 32)
+    WordMatch(AlveoKernelInstance &context, int num_results = 32)
         : context(context), num_results(num_results)
     {
+
+        // Detect which bank this kernel is connected to.
+        for (bank = 0; bank < 4; bank++) {
+            try {
+                StdoutSuppressor x;
+                AlveoBuffer test_buf(context, 4, bank);
+                context.set_arg(0, test_buf.buffer);
+                break;
+            } catch (const std::runtime_error&) {
+            }
+        }
+
+        // Create buffers for the results.
+        result_title_offset = std::make_shared<AlveoBuffer>(
+            context, CL_MEM_WRITE_ONLY, (num_results + 1) * 4, bank);
+        result_title_values = std::make_shared<AlveoBuffer>(
+            context, CL_MEM_WRITE_ONLY, (num_results + 1) * 256, bank);
+        result_matches = std::make_shared<AlveoBuffer>(
+            context, CL_MEM_WRITE_ONLY, (num_results + 1) * 4, bank);
+        result_stats = std::make_shared<AlveoBuffer>(
+            context, CL_MEM_WRITE_ONLY, 16, bank);
+
+        // Set the kernel arguments that don't ever change.
+        context.set_arg(4, (unsigned int)0);
+        context.set_arg(6, result_title_offset->buffer);
+        context.set_arg(7, result_title_values->buffer);
+        context.set_arg(8, result_matches->buffer);
+        context.set_arg(9, (unsigned int)num_results);
+        context.set_arg(10, result_stats->buffer);
+
+    }
+
+    /**
+     * Loads a recordbatch file into on-device OpenCL buffers for this instance.
+     * Returns the dataset ID for the constructed dataset.
+     */
+    unsigned int add_dataset(const std::string &fname) {
 
         // Load the record batch.
         std::shared_ptr<arrow::io::ReadableFile> file;
@@ -616,43 +690,50 @@ public:
         }
 
         // Push the record batch to the Alveo memory.
-        title_offset = arrow_to_alveo(context, bank, batch->column_data(0)->buffers[1]);
-        title_values = arrow_to_alveo(context, bank, batch->column_data(0)->buffers[2]);
-        text_offset = arrow_to_alveo(context, bank, batch->column_data(1)->buffers[1]);
-        text_values = arrow_to_alveo(context, bank, batch->column_data(1)->buffers[2]);
+        WordMatchDataset dataset;
+        dataset.title_offset = arrow_to_alveo(context, bank, batch->column_data(0)->buffers[1]);
+        dataset.title_values = arrow_to_alveo(context, bank, batch->column_data(0)->buffers[2]);
+        dataset.text_offset = arrow_to_alveo(context, bank, batch->column_data(1)->buffers[1]);
+        dataset.text_values = arrow_to_alveo(context, bank, batch->column_data(1)->buffers[2]);
+        dataset.num_rows = batch->num_rows();
+        datasets.push_back(dataset);
 
-        // Create buffers for the results.
-        result_title_offset = std::make_shared<AlveoBuffer>(
-            context, CL_MEM_WRITE_ONLY, (num_results + 1) * 4, bank);
-        result_title_values = std::make_shared<AlveoBuffer>(
-            context, CL_MEM_WRITE_ONLY, (num_results + 1) * 64, bank);
-        result_matches = std::make_shared<AlveoBuffer>(
-            context, CL_MEM_WRITE_ONLY, (num_results + 1) * 4, bank);
-        result_stats = std::make_shared<AlveoBuffer>(
-            context, CL_MEM_WRITE_ONLY, 16, bank);
+        return datasets.size() - 1;
+    }
 
-        // Configure the non-changing kernel arguments.
-        context.set_arg(0, title_offset->buffer);
-        context.set_arg(1, title_values->buffer);
-        context.set_arg(2, text_offset->buffer);
-        context.set_arg(3, text_values->buffer);
-        context.set_arg(4, (unsigned int)0);
-        context.set_arg(5, (unsigned int)batch->num_rows());
-        context.set_arg(6, result_title_offset->buffer);
-        context.set_arg(7, result_title_values->buffer);
-        context.set_arg(8, result_matches->buffer);
-        context.set_arg(9, (unsigned int)num_results);
-        context.set_arg(10, result_stats->buffer);
+    /**
+     * Returns the number of loaded datasets.
+     */
+    unsigned int get_num_datasets() const {
+        return datasets.size();
+    }
+
+    /**
+     * Configures this instance with a search pattern and search configuration.
+     */
+    void configure(const WordMatchConfig &config) {
+
+        // Configure the command-specific kernel arguments.
+        context.set_arg(11, config.search_config);
+        for (int i = 0; i < 8; i++) {
+            context.set_arg(12 + i, config.pattern_data[i]);
+        }
 
     }
 
-    std::shared_ptr<Event> invoke(const WordMatchConfig &cmd) {
+    /**
+     * Runs this instance on a previously loaded dataset using the current
+     * configuration. Returns the event object for the dataset to be waited
+     * on.
+     */
+    std::shared_ptr<Event> enqueue_for_dataset(unsigned int dataset) {
 
-        // Configure the command-specific kernel arguments.
-        context.set_arg(11, cmd.search_config);
-        for (int i = 0; i < 8; i++) {
-            context.set_arg(12 + i, cmd.pattern_data[i]);
-        }
+        // Configure the dataset kernel arguments.
+        context.set_arg(0, datasets[dataset].title_offset->buffer);
+        context.set_arg(1, datasets[dataset].title_values->buffer);
+        context.set_arg(2, datasets[dataset].text_offset->buffer);
+        context.set_arg(3, datasets[dataset].text_values->buffer);
+        context.set_arg(5, (unsigned int)datasets[dataset].num_rows);
 
         // Enqueue the kernel.
         cl_event event;
@@ -664,6 +745,9 @@ public:
 
     }
 
+    /**
+     * Loads the statistics for the most recent run.
+     */
     WordMatchStats get_stats() {
         return WordMatchStats(*result_stats);
     }
@@ -672,37 +756,42 @@ public:
 
 int main(int argc, char **argv) {
 
-    AlveoContext context("../../fletcher-alveo-demo-8/alveo/xclbin-kapot/word_match", "krnl_word_match_rtl");
-    //AlveoContext context("xclbin/word_match", "krnl_word_match_rtl");
-    //AlveoContext context("../../fletcher-alveo-demo-4/alveo/xclbin/word_match", "krnl_word_match_rtl");
+    // Parse command line.
+    std::string data_prefix = (argc > 1) ? argv[1] : "/work/shared/fletcher-alveo/simplewiki";
+    std::string bin_prefix  = (argc > 2) ? argv[2] : "xclbin/word_match";
+    std::string kernel_name = (argc > 3) ? argv[3] : "krnl_word_match_rtl";
 
-    // Initialize the kernel instances with Wikipedia record batches.
+    // Check environment for emulation mode.
+    const char *emu_mode = getenv("XCL_EMULATION_MODE");
+    if (emu_mode == NULL) {
+        emu_mode = "hw";
+    }
+
+    // Print what info about the mode we're running in.
+    printf("Alveo Wikipedia search demo\n");
+    printf(" - data source (\033[32marg 1\033[0m):\n   \033[32m%s\033[0m-<index>.rb\n", data_prefix.c_str());
+    printf(" - xclbin prefix (\033[33marg 2\033[0m, \033[35menv\033[0m):\n   "
+           "\033[33m%s\033[0m.\033[35m%s\033[0m.<device>.xclbin\n", bin_prefix.c_str(), emu_mode);
+    printf(" - kernel name (\033[36marg 3\033[0m):\n   \033[36m%s\033[0m\n\n", kernel_name.c_str());
+
+    // Create the context.
+    AlveoContext context(bin_prefix + "." + emu_mode, kernel_name);
+
+    // Construct WordMatch objects for each subdevice.
     std::vector<std::shared_ptr<WordMatch>> matchers;
-    for (unsigned int i = 0; i < context.instances.size(); i++) {
-        int bank;
-        if (context.instances.size() == 8) {
-            if (i < 3) {
-                bank = 0;
-            } else if (i < 5) {
-                bank = 1;
-            } else {
-                bank = 3;
-            }
-        } else if (context.instances.size() == 12) {
-            bank = 1;
-        } else {
-            if (i < 15) {
-                bank = 0;
-            } else if (i < 20) {
-                bank = 1;
-            } else {
-                bank = 3;
-            }
+    for (auto instance : context.instances) {
+        matchers.push_back(std::make_shared<WordMatch>(*instance));
+    }
+
+    // Distribute the Wikipedia record batches over the kernel instances.
+    unsigned int matcher = 0;
+    for (unsigned int batch = 0;; batch++, matcher++, matcher %= matchers.size()) {
+        std::string batch_filename = data_prefix + "-" + std::to_string(batch) + ".rb";
+        if (access(batch_filename.c_str(), F_OK) == -1) {
+            break;
         }
-        printf("pushing data for word matcher %d to DDR bank %d...\n", i, bank);
-        matchers.push_back(std::make_shared<WordMatch>(
-            *context.instances[i], bank,
-            "/work/shared/fletcher-alveo/simplewiki-" + std::to_string(i) + ".rb"));
+        printf("Loading %s for instance %d...\n", batch_filename.c_str(), matcher);
+        matchers[matcher]->add_dataset(batch_filename);
     }
 
     while (true) {
@@ -721,13 +810,14 @@ int main(int argc, char **argv) {
             return 0;
         }
 
-        WordMatchConfig cmd(pattern);
+        WordMatchConfig config(pattern);
 
         // Enqueue kernel runs.
         std::vector<std::shared_ptr<Event>> events;
         for (unsigned int i = 0; i < matchers.size(); i++) {
             printf("queue matcher %d...\n", i);
-            events.push_back(matchers[i]->invoke(cmd));
+            matchers[i]->configure(config);
+            events.push_back(matchers[i]->enqueue_for_dataset(0));
         }
 
         // Wait for completion on all kernels.
