@@ -312,7 +312,6 @@ begin
 
                   -- Reset the relevant state for the next command.
                   busy         := '0';
-                  st_index     := "00";
                   last_seen    := '0';
                   page_matches := (others => '0');
                   word_matches := (others => '0');

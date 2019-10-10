@@ -204,7 +204,7 @@ begin
           -- Send match result output command for title column.
           result_title_cmd_valid    <= '1';
           result_title_cmd_firstIdx <= X"00000000";
-          result_title_cmd_lastidx  <= X"0000" & mmio_cmd.f_result_size_data(15 downto 0);
+          result_title_cmd_lastidx  <= X"00000000";
           result_title_cmd_ctrl     <= mmio_cmd.f_res_title_val_addr_data
                                     & mmio_cmd.f_res_title_offs_addr_data;
           result_title_cmd_tag      <= "0";
