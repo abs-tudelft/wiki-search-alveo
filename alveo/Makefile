@@ -45,7 +45,7 @@ opencl_LDFLAGS=-L$(OPENCL_LIB) -lOpenCL -lpthread
 xcl2_SRCS:=libs/xcl2/xcl2.cpp
 xcl2_HDRS:=libs/xcl2/xcl2.hpp
 
-xcl2_CXXFLAGS:=-Ilibs/xcl2
+xcl2_CXXFLAGS:=-Ilibs/xcl2 -fopenmp
 
 #Include Libraries
 CXXFLAGS += $(xcl2_CXXFLAGS)
@@ -63,7 +63,9 @@ LDFLAGS += $(arrow_LDFLAGS)
 CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++14
 LDFLAGS += $(opencl_LDFLAGS)
 
-HOST_SRCS += src/host.cpp
+HOST_SRCS += src/alveo.cpp src/utils.cpp src/host.cpp
+HOST_HDRS += src/alveo.hpp src/utils.hpp
+CXXFLAGS += -Isrc
 
 # Host compiler global settings
 CXXFLAGS += -fmessage-length=0
@@ -100,7 +102,7 @@ $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin: $(BINARY_CONTAINER_word_match_OBJS
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
-	$(CXX) $(CXXFLAGS) $(HOST_SRCS) $(HOST_HDRS) -o '$@' $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(HOST_SRCS) -o '$@' $(LDFLAGS)
 
 emconfig:$(EMCONFIG_DIR)/emconfig.json
 $(EMCONFIG_DIR)/emconfig.json:
