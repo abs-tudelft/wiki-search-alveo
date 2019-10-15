@@ -1,1 +1,1 @@
-vhdmmio -P vhdl -V @ -H mmio-doc
+vhdmmio -P vhdl -V vhdl -H mmio-doc

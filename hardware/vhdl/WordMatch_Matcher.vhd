@@ -4,15 +4,15 @@ use ieee.numeric_std.all;
 
 library work;
 use work.vhdmmio_pkg.all;
-use work.mmio_pkg.all;
+use work.WordMatch_MMIO_pkg.all;
 
-entity word_match_matcher is
+entity WordMatch_Matcher is
   port (
     clk                       : in  std_logic;
     reset                     : in  std_logic;
 
     -- Matcher configuration from MMIO block.
-    mmio_cfg                  : in  mmio_g_cfg_o_type;
+    mmio_cfg                  : in  wordmatch_mmio_g_cfg_o_type;
 
     -- Incoming article text.
     pages_text_chars_valid    : in  std_logic;
@@ -31,7 +31,7 @@ entity word_match_matcher is
   );
 end entity;
 
-architecture Implementation of word_match_matcher is
+architecture Implementation of WordMatch_Matcher is
 
   -- 1..32 refer to matches with the characters in the match word. 0 and 33
   -- are used for word boundary matching.
@@ -60,7 +60,7 @@ begin
 
     -- Input holding register.
     variable in_valid     : std_logic;
-    variable in_chars     : mmio_f_search_data_data_array(0 to 7);
+    variable in_chars     : wordmatch_mmio_f_search_data_data_array(0 to 7);
     variable in_count     : unsigned(3 downto 0);
     variable in_last      : std_logic;
 

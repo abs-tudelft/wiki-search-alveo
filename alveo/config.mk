@@ -1,7 +1,6 @@
 VHDL_FILES = $(shell python3 -m vhdeps dump krnl_word_match_rtl \
                -i src \
                -i ../hardware/vhdl \
-               -i ../hardware/mmio-alveo \
                -i ../../fletcher/hardware \
                -i ../../vhsnunzip/vhdl \
                -msyn -v93 | cut -d ' ' -f 4-)

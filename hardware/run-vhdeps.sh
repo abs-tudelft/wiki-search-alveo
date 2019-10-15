@@ -1,1 +1,1 @@
-vhdeps "$@" -i vhdl -i mmio-fletchgen -i ../../fletcher/hardware -i ../../vhsnunzip/vhdl
+vhdeps "$@" -i vhdl -i ../../fletcher/hardware -i ../../vhsnunzip/vhdl

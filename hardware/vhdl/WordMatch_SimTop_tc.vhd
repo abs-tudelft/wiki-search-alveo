@@ -24,54 +24,25 @@ use work.UtilConv_pkg.all;
 
 -- pragma simulation timeout 50 us
 
-entity word_match_SimTop_tc is
+entity WordMatch_SimTop_tc is
   generic (
-    -- Accelerator properties
-    INDEX_WIDTH                 : natural := 32;
-    REG_WIDTH                   : natural := 32;
-    TAG_WIDTH                   : natural := 1;
-
-    -- Host bus properties
     BUS_ADDR_WIDTH              : natural := 64;
-    BUS_DATA_WIDTH              : natural := 64;
-    BUS_STROBE_WIDTH            : natural := 8;
-    BUS_LEN_WIDTH               : natural := 8;
-    BUS_BURST_MAX_LEN           : natural := 64;
-    BUS_BURST_STEP_LEN          : natural := 1;
-
-    -- MMIO bus properties
-    SLV_BUS_ADDR_WIDTH          : natural := 32;
-    SLV_BUS_DATA_WIDTH          : natural := 32
+    BUS_DATA_WIDTH              : natural := 64
   );
-end word_match_SimTop_tc;
+end WordMatch_SimTop_tc;
 
-architecture Behavorial of word_match_SimTop_tc is
-
-  -- Fletcher defaults
-  constant REG_CONTROL          : natural := 0;
-  constant REG_STATUS           : natural := 1;
-  constant REG_RETURN0          : natural := 2;
-  constant REG_RETURN1          : natural := 3;
-
-  constant CONTROL_CLEAR        : std_logic_vector(31 downto 0) := X"00000000";
-  constant CONTROL_START        : std_logic_vector(31 downto 0) := X"00000001";
-  constant CONTROL_STOP         : std_logic_vector(31 downto 0) := X"00000002";
-  constant CONTROL_RESET        : std_logic_vector(31 downto 0) := X"00000004";
-
-  constant STATUS_IDLE          : std_logic_vector(31 downto 0) := X"00000001";
-  constant STATUS_BUSY          : std_logic_vector(31 downto 0) := X"00000002";
-  constant STATUS_DONE          : std_logic_vector(31 downto 0) := X"00000004";
+architecture Behavorial of WordMatch_SimTop_tc is
 
   -- Sim signals
   signal clock_stop             : boolean := false;
 
   -- Accelerator signals
-  signal kcd_clk                : std_logic;
-  signal kcd_reset              : std_logic;
+  signal dec_clk                : std_logic;
+  signal dec_reset              : std_logic;
 
   -- Fletcher bus signals
-  signal bcd_clk                : std_logic;
-  signal bcd_reset              : std_logic;
+  signal bus_clk                : std_logic;
+  signal bus_reset              : std_logic;
 
   -- MMIO signals
   signal mmio_awvalid           : std_logic := '0';
@@ -148,7 +119,10 @@ architecture Behavorial of word_match_SimTop_tc is
   signal m_axi_wready           : std_logic;
   signal m_axi_wdata            : std_logic_vector(BUS_DATA_WIDTH-1 downto 0);
   signal m_axi_wlast            : std_logic;
-  signal m_axi_wstrb            : std_logic_vector(BUS_STROBE_WIDTH-1 downto 0);
+  signal m_axi_wstrb            : std_logic_vector(BUS_DATA_WIDTH/8-1 downto 0);
+  signal m_axi_bvalid           : std_logic;
+  signal m_axi_bready           : std_logic;
+  signal m_axi_bresp            : std_logic_vector(1 downto 0);
 
   procedure mmio_write (constant idx    : in  natural;
                         constant data   : in  std_logic_vector(31 downto 0);
@@ -159,13 +133,13 @@ architecture Behavorial of word_match_SimTop_tc is
     -- Wait for reset
     loop
       exit when sink.reset = '0';
-      wait until rising_edge(kcd_clk);
+      wait until rising_edge(bus_clk);
     end loop;
     -- Address write channel
-    source.awaddr <= slv((REG_WIDTH/8)*idx, 32);
+    source.awaddr <= slv((32/8)*idx, 32);
     source.awvalid <= '1';
     loop
-      wait until rising_edge(kcd_clk);
+      wait until rising_edge(bus_clk);
       exit when sink.awready = '1';
     end loop;
     source.awvalid <= '0';
@@ -175,7 +149,7 @@ architecture Behavorial of word_match_SimTop_tc is
     source.wstrb <= (others => '1');
     source.wvalid <= '1';
     loop
-      wait until rising_edge(kcd_clk);
+      wait until rising_edge(bus_clk);
       exit when sink.wready = '1';
     end loop;
     source.wvalid <= '0';
@@ -184,7 +158,7 @@ architecture Behavorial of word_match_SimTop_tc is
     -- Write response channel.
     source.bready <= '1';
     loop
-      wait until rising_edge(kcd_clk);
+      wait until rising_edge(bus_clk);
       exit when sink.bvalid = '1';
     end loop;
     source.bready <= '0';
@@ -199,13 +173,13 @@ architecture Behavorial of word_match_SimTop_tc is
     -- Wait for reset
     loop
       exit when sink.reset = '0';
-      wait until rising_edge(kcd_clk);
+      wait until rising_edge(bus_clk);
     end loop;
     -- Address read channel
-    source.araddr <= slv((REG_WIDTH/8)*idx, 32);
+    source.araddr <= slv((32/8)*idx, 32);
     source.arvalid <= '1';
     loop
-      wait until rising_edge(kcd_clk);
+      wait until rising_edge(bus_clk);
       exit when sink.arready = '1';
     end loop;
     source.arvalid <= '0';
@@ -213,7 +187,7 @@ architecture Behavorial of word_match_SimTop_tc is
     -- Read channel
     loop
       source.rready <= '1';
-      wait until rising_edge(kcd_clk);
+      wait until rising_edge(bus_clk);
       if sink.rvalid = '1' then
         data := sink.rdata;
         exit;
@@ -236,7 +210,7 @@ begin
   mmio_araddr  <= mmio_source.araddr;
   mmio_rready  <= mmio_source.rready;
 
-  mmio_sink.reset   <= kcd_reset;
+  mmio_sink.reset   <= dec_reset;
   mmio_sink.wready  <= mmio_wready;
   mmio_sink.awready <= mmio_awready;
   mmio_sink.bvalid  <= mmio_bvalid;
@@ -249,8 +223,8 @@ begin
 
   -- Typical stimuli process:
   stimuli_proc : process is
-    variable read_data        : std_logic_vector(REG_WIDTH-1 downto 0) := X"DEADBEEF";
-    variable read_data_masked : std_logic_vector(REG_WIDTH-1 downto 0);
+    variable read_data        : std_logic_vector(31 downto 0) := X"DEADBEEF";
+    variable read_data_masked : std_logic_vector(31 downto 0);
   begin
     mmio_source.awvalid <= '0';
     mmio_source.wvalid  <= '0';
@@ -259,75 +233,77 @@ begin
     mmio_source.arvalid <= '0';
     mmio_source.rready  <= '0';
 
-    wait until kcd_reset = '1' and bcd_reset = '1';
+    wait until dec_reset = '1' and bus_reset = '1';
 
-    -- 1. Reset the user core
-    mmio_write(REG_CONTROL, CONTROL_RESET, mmio_source, mmio_sink);
-    mmio_write(REG_CONTROL, CONTROL_CLEAR, mmio_source, mmio_sink);
-
-    -- 2. Write addresses of the arrow buffers in the SREC file.
-    mmio_write(10, X"00000000", mmio_source, mmio_sink); -- Pages title_offsets
+    -- Input buffer addresses.
+    mmio_write(4, X"00000000", mmio_source, mmio_sink); -- Pages title_offsets
+    mmio_write(5, X"00000000", mmio_source, mmio_sink);
+    mmio_write(6, X"000089c0", mmio_source, mmio_sink); -- Pages title_values
+    mmio_write(7, X"00000000", mmio_source, mmio_sink);
+    mmio_write(8, X"00032f00", mmio_source, mmio_sink); -- Pages text_offsets
+    mmio_write(9, X"00000000", mmio_source, mmio_sink);
+    mmio_write(10, X"0003b8c0", mmio_source, mmio_sink); -- Pages text_values
     mmio_write(11, X"00000000", mmio_source, mmio_sink);
-    mmio_write(12, X"000089c0", mmio_source, mmio_sink); -- Pages title_values
-    mmio_write(13, X"00000000", mmio_source, mmio_sink);
-    mmio_write(14, X"00032f00", mmio_source, mmio_sink); -- Pages text_offsets
-    mmio_write(15, X"00000000", mmio_source, mmio_sink);
-    mmio_write(16, X"0003b8c0", mmio_source, mmio_sink); -- Pages text_values
-    mmio_write(17, X"00000000", mmio_source, mmio_sink);
-    mmio_write(18, X"00001000", mmio_source, mmio_sink); -- Result title_offsets
-    mmio_write(19, X"00000000", mmio_source, mmio_sink);
-    mmio_write(20, X"00002000", mmio_source, mmio_sink); -- Result title_values
-    mmio_write(21, X"00000000", mmio_source, mmio_sink);
-    mmio_write(22, X"00003000", mmio_source, mmio_sink); -- Result count_values
-    mmio_write(23, X"00000000", mmio_source, mmio_sink);
-    mmio_write(24, X"00004000", mmio_source, mmio_sink); -- Stats stats_values
-    mmio_write(25, X"00000000", mmio_source, mmio_sink);
 
-    -- 3. Write recordbatch bounds.
-    mmio_write(4, X"00000000", mmio_source, mmio_sink); -- Pages first index
-    --mmio_write(5, X"0000226c", mmio_source, mmio_sink); -- Pages last index
-    mmio_write(5, X"00000100", mmio_source, mmio_sink); -- Pages last index
-    mmio_write(6, X"00000000", mmio_source, mmio_sink); -- Result first index
-    mmio_write(7, X"00000002", mmio_source, mmio_sink); -- Result last index
-    mmio_write(8, X"00000000", mmio_source, mmio_sink); -- Stats first index
-    mmio_write(9, X"00000000", mmio_source, mmio_sink); -- Stats last index
+    -- Input buffer size and distribution over subkernels.
+    mmio_write(12, X"00000000", mmio_source, mmio_sink); -- Pages first index
+    mmio_write(13, X"00000080", mmio_source, mmio_sink); -- Middle index
+    mmio_write(14, X"00000100", mmio_source, mmio_sink); -- Middle index
+    mmio_write(15, X"00000180", mmio_source, mmio_sink); -- Pages last index
+    --mmio_write(15, X"0000226c", mmio_source, mmio_sink); -- Pages last index
 
-    -- 4. Write any kernel-specific registers.
-    mmio_write(26, X"00000000", mmio_source, mmio_sink); -- search data 0
-    mmio_write(27, X"00000000", mmio_source, mmio_sink); -- search data 4
-    mmio_write(28, X"00000000", mmio_source, mmio_sink); -- search data 8
-    mmio_write(29, X"00000000", mmio_source, mmio_sink); -- search data 12
-    mmio_write(30, X"00000000", mmio_source, mmio_sink); -- search data 16
-    mmio_write(31, X"00000000", mmio_source, mmio_sink); -- search data 20
-    mmio_write(32, X"00000000", mmio_source, mmio_sink); -- search data 24
-    mmio_write(33, X"656E696C", mmio_source, mmio_sink); -- search data 28
-    mmio_write(34, X"0000001c", mmio_source, mmio_sink); -- search config
-    mmio_write(35, X"00000001", mmio_source, mmio_sink); -- min matches
+    -- Result buffer addresses.
+    mmio_write(16, X"00000000", mmio_source, mmio_sink); -- Result title_offsets
+    mmio_write(17, X"00000001", mmio_source, mmio_sink);
+    mmio_write(18, X"00000000", mmio_source, mmio_sink); -- Result title_values
+    mmio_write(19, X"00000002", mmio_source, mmio_sink);
+    mmio_write(20, X"00000000", mmio_source, mmio_sink); -- Result count_values
+    mmio_write(21, X"00000003", mmio_source, mmio_sink);
+    mmio_write(22, X"00000000", mmio_source, mmio_sink); -- Stats stats_values
+    mmio_write(23, X"00000004", mmio_source, mmio_sink);
+
+    -- Configure the kernel.
+    mmio_write(24, X"00000000", mmio_source, mmio_sink); -- search data 0
+    mmio_write(25, X"00000000", mmio_source, mmio_sink); -- search data 4
+    mmio_write(26, X"00000000", mmio_source, mmio_sink); -- search data 8
+    mmio_write(27, X"00000000", mmio_source, mmio_sink); -- search data 12
+    mmio_write(28, X"00000000", mmio_source, mmio_sink); -- search data 16
+    mmio_write(29, X"00000000", mmio_source, mmio_sink); -- search data 20
+    mmio_write(30, X"00000000", mmio_source, mmio_sink); -- search data 24
+    mmio_write(31, X"656E696C", mmio_source, mmio_sink); -- search data 28
+    mmio_write(32, X"0001001c", mmio_source, mmio_sink); -- search config
+    mmio_write(33, X"00000002", mmio_source, mmio_sink); -- number of result records
 
     -- 5. Start the user core.
-    mmio_write(REG_CONTROL, CONTROL_START, mmio_source, mmio_sink);
-    mmio_write(REG_CONTROL, CONTROL_CLEAR, mmio_source, mmio_sink);
+    mmio_write(0, X"00000001", mmio_source, mmio_sink);
 
     -- 6. Poll for completion
     loop
       -- Wait a bunch of cycles.
       for I in 0 to 128 loop
-        wait until rising_edge(kcd_clk);
+        wait until rising_edge(bus_clk);
       end loop;
 
       -- Read the status register.
-      mmio_read(REG_STATUS, read_data, mmio_source, mmio_sink);
+      mmio_read(0, read_data, mmio_source, mmio_sink);
 
       -- Check if we're done.
-      read_data_masked := read_data and STATUS_DONE;
-      exit when read_data_masked = STATUS_DONE;
+      exit when read_data(1) = '1';
     end loop;
 
     -- 7. Read return register.
-    mmio_read(REG_RETURN0, read_data, mmio_source, mmio_sink);
-    println("Return register 0: " & slvToHex(read_data));
-    mmio_read(REG_RETURN1, read_data, mmio_source, mmio_sink);
-    println("Return register 1: " & slvToHex(read_data));
+    mmio_read(34, read_data, mmio_source, mmio_sink);
+    println("Magic number: " & slvToHex(read_data));
+    mmio_read(35, read_data, mmio_source, mmio_sink);
+    println("Word match count: " & slvToHex(read_data));
+    mmio_read(36, read_data, mmio_source, mmio_sink);
+    println("Page match count: " & slvToHex(read_data));
+    mmio_read(37, read_data, mmio_source, mmio_sink);
+    println("Max matches in a single article: " & slvToHex(read_data));
+    mmio_read(38, read_data, mmio_source, mmio_sink);
+    println("Index of the above article: " & slvToHex(read_data));
+    mmio_read(39, read_data, mmio_source, mmio_sink);
+    println("Number of cycles: " & slvToHex(read_data));
 
     -- 8. Finish and stop simulation.
     report "Stimuli done.";
@@ -336,15 +312,25 @@ begin
     wait;
   end process;
 
-  clk_proc: process is
+  bus_clk_proc: process is
   begin
     if not clock_stop then
-      kcd_clk <= '1';
-      bcd_clk <= '1';
-      wait for 5 ns;
-      kcd_clk <= '0';
-      bcd_clk <= '0';
-      wait for 5 ns;
+      wait for 2 ns;
+      bus_clk <= '0';
+      wait for 2 ns;
+      bus_clk <= '1';
+    else
+      wait;
+    end if;
+  end process;
+
+  dec_clk_proc: process is
+  begin
+    if not clock_stop then
+      wait for 3.3 ns;
+      dec_clk <= '0';
+      wait for 3.3 ns;
+      dec_clk <= '1';
     else
       wait;
     end if;
@@ -352,18 +338,19 @@ begin
 
   reset_proc: process is
   begin
-    kcd_reset <= '1';
-    bcd_reset <= '1';
+    dec_reset <= '1';
+    bus_reset <= '1';
     wait for 50 ns;
-    wait until rising_edge(kcd_clk);
-    kcd_reset <= '0';
-    bcd_reset <= '0';
+    wait until rising_edge(dec_clk);
+    dec_reset <= '0';
+    wait until rising_edge(bus_clk);
+    bus_reset <= '0';
     wait;
   end process;
 
-  m_axi_aresetn <= not bcd_reset;
+  m_axi_aresetn <= not bus_reset;
 
-  memory_inst: entity work.word_match_AxiSlaveMock
+  memory_inst: entity work.WordMatch_AxiSlaveMock
     generic map (
       ADDR_WIDTH                => BUS_ADDR_WIDTH,
       DATA_WIDTH                => BUS_DATA_WIDTH,
@@ -380,7 +367,7 @@ begin
       SREC_FILE_OUT             => ""
     )
     port map (
-      aclk                      => bcd_clk,
+      aclk                      => bus_clk,
       aresetn                   => m_axi_aresetn,
 
       awvalid                   => m_axi_awvalid,
@@ -398,10 +385,10 @@ begin
       wstrb                     => m_axi_wstrb,
       wlast                     => m_axi_wlast,
 
-      bvalid                    => open,
-      bready                    => '1',
+      bvalid                    => m_axi_bvalid,
+      bready                    => m_axi_bready,
       bid                       => open,
-      bresp                     => open,
+      bresp                     => m_axi_bresp,
 
       arvalid                   => m_axi_arvalid,
       arready                   => m_axi_arready,
@@ -422,22 +409,16 @@ begin
   -----------------------------------------------------------------------------
   -- Fletcher generated wrapper
   -----------------------------------------------------------------------------
-  uut: entity work.word_match_AxiTop
+  uut: entity work.WordMatch_AxiTop
     generic map (
       BUS_ADDR_WIDTH            => BUS_ADDR_WIDTH,
-      BUS_DATA_WIDTH            => BUS_DATA_WIDTH,
-      BUS_STROBE_WIDTH          => BUS_STROBE_WIDTH,
-      BUS_LEN_WIDTH             => BUS_LEN_WIDTH,
-      BUS_BURST_MAX_LEN         => BUS_BURST_MAX_LEN,
-      BUS_BURST_STEP_LEN        => BUS_BURST_STEP_LEN,
-      MMIO_ADDR_WIDTH           => SLV_BUS_ADDR_WIDTH,
-      MMIO_DATA_WIDTH           => SLV_BUS_DATA_WIDTH
+      BUS_DATA_WIDTH            => BUS_DATA_WIDTH
     )
     port map (
-      kcd_clk                   => kcd_clk,
-      kcd_reset                 => kcd_reset,
-      bcd_clk                   => bcd_clk,
-      bcd_reset                 => bcd_reset,
+      dec_clk                   => dec_clk,
+      dec_reset                 => dec_reset,
+      bus_clk                   => bus_clk,
+      bus_reset                 => bus_reset,
       m_axi_araddr              => m_axi_araddr,
       m_axi_arlen               => m_axi_arlen,
       m_axi_arvalid             => m_axi_arvalid,
@@ -458,6 +439,9 @@ begin
       m_axi_wdata               => m_axi_wdata,
       m_axi_wlast               => m_axi_wlast,
       m_axi_wstrb               => m_axi_wstrb,
+      m_axi_bvalid              => m_axi_bvalid,
+      m_axi_bready              => m_axi_bready,
+      m_axi_bresp               => m_axi_bresp,
       s_axi_awvalid             => mmio_awvalid,
       s_axi_awready             => mmio_awready,
       s_axi_awaddr              => mmio_awaddr,
@@ -474,8 +458,7 @@ begin
       s_axi_rvalid              => mmio_rvalid,
       s_axi_rready              => mmio_rready,
       s_axi_rdata               => mmio_rdata,
-      s_axi_rresp               => mmio_rresp,
-      write_busy                => '0'
+      s_axi_rresp               => mmio_rresp
     );
 
 end architecture;

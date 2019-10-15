@@ -8,86 +8,70 @@ use ieee.numeric_std.all;
 library work;
 use work.vhdmmio_pkg.all;
 
-package mmio_pkg is
+package WordMatch_MMIO_pkg is
 
   -- Types used by the register file interface.
-  type mmio_g_cmd_o_type is record
+  type wordmatch_mmio_g_filt_o_type is record
     f_title_offs_addr_data : std_logic_vector(63 downto 0);
     f_title_val_addr_data : std_logic_vector(63 downto 0);
+    f_min_matches_data : std_logic_vector(15 downto 0);
+    f_result_size_data : std_logic_vector(31 downto 0);
+  end record;
+  constant WORDMATCH_MMIO_G_FILT_O_RESET : wordmatch_mmio_g_filt_o_type := (
+    f_title_offs_addr_data => (others => '0'),
+    f_title_val_addr_data => (others => '0'),
+    f_min_matches_data => (others => '0'),
+    f_result_size_data => (others => '0')
+  );
+  subtype WordMatch_MMIO_f_index_data_type is std_logic_vector(19 downto 0);
+  type WordMatch_MMIO_f_index_data_array is array (natural range <>) of WordMatch_MMIO_f_index_data_type;
+  type wordmatch_mmio_g_cmd_o_type is record
     f_text_offs_addr_data : std_logic_vector(63 downto 0);
     f_text_val_addr_data : std_logic_vector(63 downto 0);
-    f_first_idx_data : std_logic_vector(31 downto 0);
-    f_last_idx_data : std_logic_vector(31 downto 0);
+    f_index_data : WordMatch_MMIO_f_index_data_array(0 to 3);
     f_res_title_offs_addr_data : std_logic_vector(63 downto 0);
     f_res_title_val_addr_data : std_logic_vector(63 downto 0);
     f_res_match_addr_data : std_logic_vector(63 downto 0);
     f_res_stats_addr_data : std_logic_vector(63 downto 0);
-    f_result_size_data : std_logic_vector(31 downto 0);
-    s_start : std_logic;
   end record;
-  constant MMIO_G_CMD_O_RESET : mmio_g_cmd_o_type := (
-    f_title_offs_addr_data => (others => '0'),
-    f_title_val_addr_data => (others => '0'),
+  constant WORDMATCH_MMIO_G_CMD_O_RESET : wordmatch_mmio_g_cmd_o_type := (
     f_text_offs_addr_data => (others => '0'),
     f_text_val_addr_data => (others => '0'),
-    f_first_idx_data => (others => '0'),
-    f_last_idx_data => (others => '0'),
+    f_index_data => (others => (others => '0')),
     f_res_title_offs_addr_data => (others => '0'),
     f_res_title_val_addr_data => (others => '0'),
     f_res_match_addr_data => (others => '0'),
-    f_res_stats_addr_data => (others => '0'),
-    f_result_size_data => (others => '0'),
-    s_start => '0'
+    f_res_stats_addr_data => (others => '0')
   );
-  subtype mmio_f_search_data_data_type is std_logic_vector(7 downto 0);
-  type mmio_f_search_data_data_array is array (natural range <>) of mmio_f_search_data_data_type;
-  type mmio_g_cfg_o_type is record
+  subtype WordMatch_MMIO_f_search_data_data_type is std_logic_vector(7 downto 0);
+  type WordMatch_MMIO_f_search_data_data_array is array (natural range <>) of WordMatch_MMIO_f_search_data_data_type;
+  type wordmatch_mmio_g_cfg_o_type is record
+    f_search_data_data : WordMatch_MMIO_f_search_data_data_array(0 to 31);
     f_search_first_data : std_logic_vector(4 downto 0);
     f_whole_words_data : std_logic;
-    f_min_matches_data : std_logic_vector(15 downto 0);
-    f_search_data_data : mmio_f_search_data_data_array(0 to 31);
   end record;
-  constant MMIO_G_CFG_O_RESET : mmio_g_cfg_o_type := (
+  constant WORDMATCH_MMIO_G_CFG_O_RESET : wordmatch_mmio_g_cfg_o_type := (
+    f_search_data_data => (others => (others => '0')),
     f_search_first_data => (others => '0'),
-    f_whole_words_data => '0',
-    f_min_matches_data => (others => '0'),
-    f_search_data_data => (others => (others => '0'))
+    f_whole_words_data => '0'
   );
-  type mmio_g_result_i_type is record
+  type wordmatch_mmio_g_stat_i_type is record
     f_num_word_matches_write_data : std_logic_vector(31 downto 0);
-    f_num_word_matches_write_enable : std_logic;
     f_num_page_matches_write_data : std_logic_vector(31 downto 0);
-    f_num_page_matches_write_enable : std_logic;
     f_max_word_matches_write_data : std_logic_vector(15 downto 0);
-    f_max_word_matches_write_enable : std_logic;
     f_max_page_idx_write_data : std_logic_vector(19 downto 0);
-    f_max_page_idx_write_enable : std_logic;
     f_cycle_count_write_data : std_logic_vector(31 downto 0);
-    f_cycle_count_write_enable : std_logic;
   end record;
-  constant MMIO_G_RESULT_I_RESET : mmio_g_result_i_type := (
+  constant WORDMATCH_MMIO_G_STAT_I_RESET : wordmatch_mmio_g_stat_i_type := (
     f_num_word_matches_write_data => (others => '0'),
-    f_num_word_matches_write_enable => '0',
     f_num_page_matches_write_data => (others => '0'),
-    f_num_page_matches_write_enable => '0',
     f_max_word_matches_write_data => (others => '0'),
-    f_max_word_matches_write_enable => '0',
     f_max_page_idx_write_data => (others => '0'),
-    f_max_page_idx_write_enable => '0',
-    f_cycle_count_write_data => (others => '0'),
-    f_cycle_count_write_enable => '0'
-  );
-  type mmio_g_stat_i_type is record
-    s_starting : std_logic;
-    s_done : std_logic;
-  end record;
-  constant MMIO_G_STAT_I_RESET : mmio_g_stat_i_type := (
-    s_starting => '0',
-    s_done => '0'
+    f_cycle_count_write_data => (others => '0')
   );
 
-  -- Component declaration for mmio.
-  component mmio is
+  -- Component declaration for WordMatch_MMIO.
+  component WordMatch_MMIO is
     port (
 
       -- Clock sensitive to the rising edge and synchronous, active-high reset.
@@ -95,41 +79,42 @@ package mmio_pkg is
       reset : in std_logic := '0';
 
       -- Interface group for:
-      --  - field first_idx: First index to process in the input dataset.
-      --  - field last_idx: Last index to process in the input dataset,
-      --    diminished-one.
-      --  - field res_match_addr: Address for the match count value buffer.
-      --  - field res_stats_addr: Address for the 64-bit result "buffer".
-      --  - field res_title_offs_addr: Address for the matched article title
-      --    offset buffer.
-      --  - field res_title_val_addr: Address for the matched article title
-      --    value buffer.
+      --  - field min_matches: Minimum number of times that the word needs to
+      --    occur in the article text for the page to be considered to match.
       --  - field result_size: Number of matches to return. The kernel will
       --    always write this many match records; it'll just pad with empty
       --    title strings and 0 for the match count when less articles match
       --    than this value implies, and it'll void any matches it doesn't have
       --    room for.
+      --  - field title_offs_addr: Address for the article title offset buffer.
+      --  - field title_val_addr: Address for the article title value buffer.
+      g_filt_o : out wordmatch_mmio_g_filt_o_type
+          := WORDMATCH_MMIO_G_FILT_O_RESET;
+
+      -- Interface group for:
+      --  - field group index: input dataset indices.
+      --  - field res_match_addr: Address for the match count value buffer.
+      --  - field res_stats_addr: Address for the statistics buffer.
+      --  - field res_title_offs_addr: Address for the matched article title
+      --    offset buffer.
+      --  - field res_title_val_addr: Address for the matched article title
+      --    value buffer.
       --  - field text_offs_addr: Address for the compressed article data offset
       --    buffer.
       --  - field text_val_addr: Address for the compressed article data value
       --    buffer.
-      --  - field title_offs_addr: Address for the article title offset buffer.
-      --  - field title_val_addr: Address for the article title value buffer.
-      --  - output port for internal signal start.
-      g_cmd_o : out mmio_g_cmd_o_type := MMIO_G_CMD_O_RESET;
+      g_cmd_o : out wordmatch_mmio_g_cmd_o_type := WORDMATCH_MMIO_G_CMD_O_RESET;
 
       -- Interface group for:
       --  - field group search_data: The word to match. The length is set by
       --    `search_first`; that is, THE WORD MUST BE RIGHT-ALIGNED. The
       --    character used to pad the unused bytes before the word is don't
       --    care.
-      --  - field min_matches: Minimum number of times that the word needs to
-      --    occur in the article text for the page to be considered to match.
       --  - field search_first: Index of the first valid character in
       --    `search_data`.
       --  - field whole_words: selects between whole-words and regular pattern
       --    matching.
-      g_cfg_o : out mmio_g_cfg_o_type := MMIO_G_CFG_O_RESET;
+      g_cfg_o : out wordmatch_mmio_g_cfg_o_type := WORDMATCH_MMIO_G_CFG_O_RESET;
 
       -- Interface group for:
       --  - field cycle_count: Number of cycles taken by the last command.
@@ -141,12 +126,17 @@ package mmio_pkg is
       --    word at least as many times as requested by `min_match`.
       --  - field num_word_matches: Number of times that the word occured in the
       --    dataset.
-      g_result_i : in mmio_g_result_i_type := MMIO_G_RESULT_I_RESET;
+      g_stat_i : in wordmatch_mmio_g_stat_i_type
+          := WORDMATCH_MMIO_G_STAT_I_RESET;
 
-      -- Interface group for:
-      --  - strobe port for internal signal done.
-      --  - strobe port for internal signal starting.
-      g_stat_i : in mmio_g_stat_i_type := MMIO_G_STAT_I_RESET;
+      -- Interface for output port for internal signal start.
+      s_start : out std_logic := '0';
+
+      -- Interface for strobe port for internal signal starting.
+      s_starting : in std_logic := '0';
+
+      -- Interface for strobe port for internal signal done.
+      s_done : in std_logic := '0';
 
       -- Interface for output port for internal signal interrupt.
       s_interrupt : out std_logic := '0';
@@ -176,4 +166,4 @@ package mmio_pkg is
     );
   end component;
 
-end package mmio_pkg;
+end package WordMatch_MMIO_pkg;

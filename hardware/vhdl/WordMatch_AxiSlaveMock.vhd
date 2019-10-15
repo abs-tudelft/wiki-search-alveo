@@ -22,7 +22,7 @@ use work.UtilMem64_pkg.all;
 use work.UtilInt_pkg.all;
 use work.UtilStr_pkg.all;
 
-entity word_match_AxiSlaveMock is
+entity WordMatch_AxiSlaveMock is
   generic (
     ADDR_WIDTH                  : natural := 32;
     DATA_WIDTH                  : natural := 32;
@@ -98,9 +98,9 @@ entity word_match_AxiSlaveMock is
     srec_write                  : in  std_logic := '1'
 
   );
-end word_match_AxiSlaveMock;
+end WordMatch_AxiSlaveMock;
 
-architecture behavior of word_match_AxiSlaveMock is
+architecture behavior of WordMatch_AxiSlaveMock is
 
   constant BUS_SIZE : natural := log2floor(DATA_WIDTH/8);
 
@@ -396,6 +396,7 @@ begin
 
         -- Handle the stream holding registers.
         if awh_x = '1' then
+          awh_x     := not awvalid;
           awh.valid := awvalid;
           awh.id    := awid;
           awh.addr  := awaddr;
@@ -406,6 +407,7 @@ begin
         end if;
 
         if wh_x = '1' then
+          wh_x      := not wvalid;
           wh.valid  := wvalid;
           wh.id     := wid;
           wh.data   := wdata;
@@ -418,12 +420,14 @@ begin
           severity error;
 
         if bh_x = '1' and to_x01(bready) = '1' then
+          bh_x      := '0';
           bh.valid  := '0';
           bh.id     := (others => 'U');
           bh.resp   := (others => 'U');
         end if;
 
         if arh_x = '1' then
+          arh_x     := not arvalid;
           arh.valid := arvalid;
           arh.id    := arid;
           arh.addr  := araddr;
@@ -438,6 +442,7 @@ begin
           severity error;
 
         if rh_x = '1' and to_x01(rready) = '1' then
+          rh_x     := '0';
           rh.valid := '0';
           rh.id    := (others => 'U');
           rh.data  := (others => 'U');
