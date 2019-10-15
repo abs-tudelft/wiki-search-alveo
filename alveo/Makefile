@@ -98,8 +98,12 @@ build: $(BINARY_CONTAINERS)
 $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin: $(BINARY_CONTAINER_word_match_OBJS)
 	mkdir -p $(XCLBIN)
 	# TODO(mb): hw_emu target -g flag for traces
-	$(XOCC) $(CLFLAGS) $(LDCLFLAGS) -lo $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(DSA).xo
-
+	$(XOCC) -g $(CLFLAGS) $(LDCLFLAGS) -lo $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(DSA).xo \
+		--nk krnl_word_match_rtl:3 \
+		--sp krnl_word_match_rtl_1.m_axi:DDR[0] --slr krnl_word_match_rtl_1:SLR0 \
+		--sp krnl_word_match_rtl_2.m_axi:DDR[1] --slr krnl_word_match_rtl_2:SLR1 \
+		--sp krnl_word_match_rtl_3.m_axi:DDR[3] --slr krnl_word_match_rtl_3:SLR2 \
+		--kernel_frequency '0:300|1:200'
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
 	$(CXX) $(CXXFLAGS) $(HOST_SRCS) -o '$@' $(LDFLAGS)

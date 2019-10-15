@@ -189,7 +189,7 @@ public:
     HardwareWordMatchStats(AlveoBuffer &buffer, const HardwareWordMatchDataChunk &chunk) {
 
         // Read the buffer.
-        unsigned int data[4];
+        unsigned int data[5];
         if (buffer.get_size() != sizeof(data)) {
             throw std::runtime_error("incorrect statistics buffer size");
         }
@@ -198,9 +198,9 @@ public:
         // Interpret the buffer.
         num_page_matches = data[0];
         num_word_matches = data[1];
-        max_word_matches = data[2] >> 20;
-        max_page_idx = data[2] & 0xFFFFF;
-        cycle_count = data[3];
+        max_word_matches = data[2];
+        max_page_idx = data[3];
+        cycle_count = data[4];
 
         // Find the title of the page with the most matches.
         if (max_page_idx < chunk.num_rows) {
@@ -269,15 +269,15 @@ public:
         result_matches = std::make_shared<AlveoBuffer>(
             context, CL_MEM_WRITE_ONLY, (num_results + 1) * 4, bank);
         result_stats = std::make_shared<AlveoBuffer>(
-            context, CL_MEM_WRITE_ONLY, 16, bank);
+            context, CL_MEM_WRITE_ONLY, 20, bank);
 
         // Set the kernel arguments that don't ever change.
         context.set_arg(4, (unsigned int)0);
-        context.set_arg(6, result_title_offset->buffer);
-        context.set_arg(7, result_title_values->buffer);
-        context.set_arg(8, result_matches->buffer);
-        context.set_arg(9, (unsigned int)num_results);
-        context.set_arg(10, result_stats->buffer);
+        context.set_arg(8, result_title_offset->buffer);
+        context.set_arg(9, result_title_values->buffer);
+        context.set_arg(10, result_matches->buffer);
+        context.set_arg(11, (unsigned int)num_results);
+        context.set_arg(12, result_stats->buffer);
 
         current_chunk = 0xFFFFFFFF;
     }
@@ -314,9 +314,9 @@ public:
     void configure(const HardwareWordMatchConfig &config) {
 
         // Configure the command-specific kernel arguments.
-        context.set_arg(11, config.search_config);
+        context.set_arg(21, config.search_config);
         for (int i = 0; i < 8; i++) {
-            context.set_arg(12 + i, config.pattern_data[i]);
+            context.set_arg(13 + i, config.pattern_data[i]);
         }
 
     }
@@ -336,7 +336,9 @@ private:
             context.set_arg(1, chunks[chunk].title_values->buffer);
             context.set_arg(2, chunks[chunk].text_offset->buffer);
             context.set_arg(3, chunks[chunk].text_values->buffer);
-            context.set_arg(5, (unsigned int)chunks[chunk].num_rows);
+            context.set_arg(5, (unsigned int)chunks[chunk].num_rows / 3);
+            context.set_arg(6, (unsigned int)(chunks[chunk].num_rows * 2) / 3);
+            context.set_arg(7, (unsigned int)chunks[chunk].num_rows);
 
             // Remember which chunk we're configured for.
             current_chunk = chunk;
