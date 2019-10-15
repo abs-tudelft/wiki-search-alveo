@@ -73,7 +73,9 @@ LDFLAGS += -lrt -lstdc++
 
 # Kernel compiler global settings
 CLFLAGS += -t $(TARGET) --platform $(DEVICE) --save-temps
-
+ifneq ($(TARGET),hw)
+  CLFLAGS += -g
+endif
 
 EXECUTABLE = host
 CMD_ARGS = $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin
@@ -97,8 +99,7 @@ build: $(BINARY_CONTAINERS)
 # Building kernel
 $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin: $(BINARY_CONTAINER_word_match_OBJS)
 	mkdir -p $(XCLBIN)
-	# TODO(mb): hw_emu target -g flag for traces
-	$(XOCC) -g $(CLFLAGS) $(LDCLFLAGS) -lo $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(DSA).xo \
+	$(XOCC) $(CLFLAGS) $(LDCLFLAGS) -lo $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(DSA).xo \
 		--nk krnl_word_match_rtl:3 \
 		--sp krnl_word_match_rtl_1.m_axi:DDR[0] --slr krnl_word_match_rtl_1:SLR0 \
 		--sp krnl_word_match_rtl_2.m_axi:DDR[1] --slr krnl_word_match_rtl_2:SLR1 \
