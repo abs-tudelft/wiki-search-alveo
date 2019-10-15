@@ -35,6 +35,9 @@ entity krnl_word_match_rtl is
     ap_clk                      : in  std_logic;
     ap_rst_n                    : in  std_logic;
 
+    ap_clk_2                    : in  std_logic;
+    ap_rst_n_2                  : in  std_logic;
+
     m_axi_AWVALID               : out std_logic;
     m_axi_AWREADY               : in  std_logic;
     m_axi_AWADDR                : out std_logic_vector(C_M_AXI_ADDR_WIDTH-1 downto 0);
@@ -97,10 +100,9 @@ end krnl_word_match_rtl;
 
 architecture Behavorial of krnl_word_match_rtl is
   signal ap_rst                 : std_logic;
+  signal ap_rst_2               : std_logic;
   signal s_axi_control_AWADDR32 : std_logic_vector(31 downto 0);
   signal s_axi_control_ARADDR32 : std_logic_vector(31 downto 0);
-  signal m_axi_AWVALID_int      : std_logic;
-  signal write_busy             : std_logic;
 begin
 
   rst_reg: process (ap_clk) is
@@ -110,25 +112,26 @@ begin
     end if;
   end process;
 
+  rst_reg_2: process (ap_clk_2) is
+  begin
+    if rising_edge(ap_clk_2) then
+      ap_rst_2 <= not ap_rst_n_2;
+    end if;
+  end process;
+
   s_axi_control_AWADDR32 <= std_logic_vector(resize(unsigned(s_axi_control_AWADDR), 32));
   s_axi_control_ARADDR32 <= std_logic_vector(resize(unsigned(s_axi_control_ARADDR), 32));
 
-  inst: entity work.word_match_AxiTop
+  inst: entity work.WordMatch_AxiTop
     generic map (
       BUS_ADDR_WIDTH      => C_M_AXI_ADDR_WIDTH,
-      BUS_DATA_WIDTH      => C_M_AXI_DATA_WIDTH,
-      BUS_STROBE_WIDTH    => C_M_AXI_DATA_WIDTH / 8,
-      BUS_LEN_WIDTH       => 8,
-      BUS_BURST_MAX_LEN   => 64,
-      BUS_BURST_STEP_LEN  => 1,
-      MMIO_ADDR_WIDTH     => 32,
-      MMIO_DATA_WIDTH     => 32
+      BUS_DATA_WIDTH      => C_M_AXI_DATA_WIDTH
     )
     port map (
-      kcd_clk             => ap_clk,
-      kcd_reset           => ap_rst,
-      bcd_clk             => ap_clk,
-      bcd_reset           => ap_rst,
+      bus_clk             => ap_clk,
+      bus_reset           => ap_rst,
+      dec_clk             => ap_clk_2,
+      dec_reset           => ap_rst_2,
       m_axi_araddr        => m_axi_ARADDR,
       m_axi_arlen         => m_axi_ARLEN,
       m_axi_arvalid       => m_axi_ARVALID,
@@ -139,7 +142,7 @@ begin
       m_axi_rlast         => m_axi_RLAST,
       m_axi_rvalid        => m_axi_RVALID,
       m_axi_rready        => m_axi_RREADY,
-      m_axi_awvalid       => m_axi_AWVALID_int,
+      m_axi_awvalid       => m_axi_AWVALID,
       m_axi_awready       => m_axi_AWREADY,
       m_axi_awaddr        => m_axi_AWADDR,
       m_axi_awlen         => m_axi_AWLEN,
@@ -149,6 +152,9 @@ begin
       m_axi_wdata         => m_axi_WDATA,
       m_axi_wlast         => m_axi_WLAST,
       m_axi_wstrb         => m_axi_WSTRB,
+      m_axi_bvalid        => m_axi_BVALID,
+      m_axi_bready        => m_axi_BREADY,
+      m_axi_bresp         => m_axi_BRESP,
       s_axi_awvalid       => s_axi_control_AWVALID,
       s_axi_awready       => s_axi_control_AWREADY,
       s_axi_awaddr        => s_axi_control_AWADDR32,
@@ -165,8 +171,7 @@ begin
       s_axi_rvalid        => s_axi_control_RVALID,
       s_axi_rready        => s_axi_control_RREADY,
       s_axi_rdata         => s_axi_control_RDATA,
-      s_axi_rresp         => s_axi_control_RRESP,
-      write_busy          => write_busy
+      s_axi_rresp         => s_axi_control_RRESP
     );
 
   m_axi_AWID      <= (others => '0');
@@ -183,26 +188,5 @@ begin
   m_axi_ARPROT    <= "000";
   m_axi_ARQOS     <= "0000";
   m_axi_ARREGION  <= "0000";
-  m_axi_BREADY    <= '1';
 
-  m_axi_AWVALID <= m_axi_AWVALID_int;
-
-  reg_proc: process (ap_clk) is
-    variable outstanding  : unsigned(9 downto 0);
-  begin
-    if rising_edge(ap_clk) then
-      write_busy <= m_axi_AWVALID_int or not outstanding(9);
-      if m_axi_AWVALID_int = '1' and m_axi_AWREADY = '1' then
-        outstanding := outstanding + 1;
-      end if;
-      if m_axi_BVALID = '1' then
-        outstanding := outstanding - 1;
-      end if;
-      if ap_rst = '1' then
-        outstanding := (others => '1');
-        write_busy <= '0';
-      end if;
-    end if;
-  end process;
- 
 end architecture;

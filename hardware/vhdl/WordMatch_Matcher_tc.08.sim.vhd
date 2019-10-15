@@ -23,17 +23,17 @@ use work.ClockGen_pkg.all;
 use work.StreamSource_pkg.all;
 use work.StreamSink_pkg.all;
 use work.vhdmmio_pkg.all;
-use work.mmio_pkg.all;
+use work.WordMatch_MMIO_pkg.all;
 
-entity word_match_matcher_tc is
-end word_match_matcher_tc;
+entity WordMatch_Matcher_tc is
+end WordMatch_Matcher_tc;
 
-architecture test_case of word_match_matcher_tc is
+architecture test_case of WordMatch_Matcher_tc is
 
   signal clk        : std_logic;
   signal reset      : std_logic;
 
-  signal mmio_cfg   : mmio_g_cfg_o_type;
+  signal mmio_cfg   : wordmatch_mmio_g_cfg_o_type;
 
   signal in_valid   : std_logic;
   signal in_ready   : std_logic;
@@ -72,7 +72,7 @@ begin
       count                     => in_count
     );
 
-  uut: entity work.word_match_matcher
+  uut: entity work.WordMatch_Matcher
     port map (
       clk                       => clk,
       reset                     => reset,
@@ -123,7 +123,7 @@ begin
       mmio_cfg.f_min_matches_data <= (others => '0');
     end procedure;
   begin
-    tc_open("word_match_matcher", "tests some corner cases for the word matcher.");
+    tc_open("WordMatch_Matcher", "tests some corner cases for the word matcher.");
     a.initialize("a");
     b.initialize("b");
 

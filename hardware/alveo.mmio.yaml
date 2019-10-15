@@ -1,5 +1,5 @@
 metadata:
-  name: mmio
+  name: WordMatch_MMIO
   brief: MMIO configuration for word match demo, to be used with SDAccel.
   doc: |
     The word match demo kernel takes a record batch consisting of
@@ -25,15 +25,12 @@ interface:
 
 internal-io:
   - internal: start
-    group: cmd
     direction: output
 
   - internal: starting
-    group: stat
     direction: strobe
 
   - internal: done
-    group: stat
     direction: strobe
 
   - internal: interrupt
@@ -194,7 +191,7 @@ fields:
     name: title_offs_addr
     bitrange: 63..0
     behavior: control
-    group: cmd
+    group: filt
 
   - address: 0x18
     brief: |
@@ -202,7 +199,7 @@ fields:
     name: title_val_addr
     bitrange: 63..0
     behavior: control
-    group: cmd
+    group: filt
 
   - address: 0x20
     brief: |
@@ -221,20 +218,24 @@ fields:
     group: cmd
 
   - address: 0x30
-    brief: |
-      First index to process in the input dataset.
-    name: first_idx
+    bitrange: 19..0
+    repeat: 4
+    field-repeat: 1
+    brief: input dataset indices.
+    doc: |
+      Significant is as follows:
+
+      | Register | Significance                                          |
+      |----------|-------------------------------------------------------|
+      | 0        | First index of partition 0                            |
+      | 1        | Last index of partition 0, first index of partition 1 |
+      | 2        | Last index of partition 1, first index of partition 2 |
+      | 3        | Last index of partition 2                             |
+    name: index
     behavior: control
     group: cmd
 
-  - address: 0x34
-    brief: |
-      Last index to process in the input dataset, diminished-one.
-    name: last_idx
-    behavior: control
-    group: cmd
-
-  - address: 0x38
+  - address: 0x40
     brief: |
       Address for the matched article title offset buffer.
     name: res_title_offs_addr
@@ -242,7 +243,7 @@ fields:
     behavior: control
     group: cmd
 
-  - address: 0x40
+  - address: 0x48
     brief: |
       Address for the matched article title value buffer.
     name: res_title_val_addr
@@ -250,7 +251,7 @@ fields:
     behavior: control
     group: cmd
 
-  - address: 0x48
+  - address: 0x50
     brief: |
       Address for the match count value buffer.
     name: res_match_addr
@@ -258,25 +259,27 @@ fields:
     behavior: control
     group: cmd
 
-  - address: 0x50
+  - address: 0x58
     brief: |
-      Address for the 64-bit result "buffer".
+      Address for the statistics buffer.
     name: res_stats_addr
     bitrange: 63..0
     behavior: control
     group: cmd
 
-  - address: 0x58
+  - address: 0x60
     brief: |
-      Number of matches to return. The kernel will always write this many match
-      records; it'll just pad with empty title strings and 0 for the match
-      count when less articles match than this value implies, and it'll void
-      any matches it doesn't have room for.
-    name: result_size
+      The word to match. The length is set by `search_first`; that is, THE WORD
+      MUST BE RIGHT-ALIGNED. The character used to pad the unused bytes before
+      the word is don't care.
+    name: search_data
+    bitrange: 7..0
+    repeat: 32
+    field-repeat: 4
     behavior: control
-    group: cmd
+    group: cfg
 
-  - address: 0x5C
+  - address: 0x80
     register-name: search_cfg
     register-brief: configures how the search is performed.
     group: cfg
@@ -296,100 +299,63 @@ fields:
 
       - bitrange: 31..16
         name: min_matches
+        group: filt
         brief: |
           Minimum number of times that the word needs to occur in the article text
           for the page to be considered to match.
 
-  - address: 0x60
+  - address: 0x84
     brief: |
-      The word to match. The length is set by `search_first`; that is, THE WORD
-      MUST BE RIGHT-ALIGNED. The character used to pad the unused bytes before
-      the word is don't care.
-    name: search_data
-    bitrange: 7..0
-    repeat: 32
-    field-repeat: 4
+      Number of matches to return. The kernel will always write this many match
+      records; it'll just pad with empty title strings and 0 for the match
+      count when less articles match than this value implies, and it'll void
+      any matches it doesn't have room for.
+    name: result_size
     behavior: control
-    group: cfg
+    group: filt
 
-  - address: 0x80
+  - address: 0x88
     name: deadcode
     brief: magic number used to test MMIO access.
     doc: Always reads as 0xDEADC0DE.
     behavior: constant
     value: 0xDEADC0DE
 
-  - address: 0x84
+  - address: 0x8C
     name: num_word_matches
     brief: |
       Number of times that the word occured in the dataset.
-    behavior: latching
-    group: result
+    behavior: status
+    group: stat
 
-  - address: 0x88
+  - address: 0x90
     name: num_page_matches
     brief: |
       Number of pages that contain the specified word at least as many times as
       requested by `min_match`.
-    behavior: latching
-    group: result
+    behavior: status
+    group: stat
 
-  - address: 0x8C
+  - address: 0x94
     bitrange: 15..0
     name: max_word_matches
     brief: |
       Maximum number of matches in any single page.
-    behavior: latching
-    group: result
+    behavior: status
+    group: stat
 
-  - address: 0x90
+  - address: 0x98
     bitrange: 19..0
     name: max_page_idx
     brief: |
       Index of the page with the most matches, relative to `first_idx` in the
       command registers.
-    behavior: latching
-    group: result
+    behavior: status
+    group: stat
 
-  - address: 0x94
+  - address: 0x9C
     name: cycle_count
     brief: |
       Number of cycles taken by the last command.
-    behavior: latching
-    group: result
-
-  - address: 0x98
-    register-name: debug
-    register-brief: various debug bits.
     behavior: status
-    subfields:
-
-      - group: dbg_filt
-        subfields:
-          - bitrange: 16..0
-            name: dbg_filt_r_rem_d2
-          - bitrange: 17
-            name: dbg_filt_busy
-          - bitrange: 18
-            name: dbg_filt_last_seen
-          - bitrange: 20..19
-            name: dbg_filt_st_index
-          - bitrange: 22..21
-            name: dbg_filt_title_cmd
-
-      - group: dbg_cmd
-        subfields:
-          - bitrange: 23
-            name: dbg_cmd_busy_r
-          - bitrange: 24
-            name: dbg_cmd_pages_title_wait
-          - bitrange: 25
-            name: dbg_cmd_pages_text_wait
-          - bitrange: 26
-            name: dbg_cmd_result_title_wait
-          - bitrange: 27
-            name: dbg_cmd_result_count_wait
-          - bitrange: 28
-            name: dbg_cmd_stats_wait
-          - bitrange: 33..29
-            name: dbg_cmd_timer
+    group: stat

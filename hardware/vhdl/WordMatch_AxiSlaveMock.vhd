@@ -22,7 +22,7 @@ use work.UtilMem64_pkg.all;
 use work.UtilInt_pkg.all;
 use work.UtilStr_pkg.all;
 
-entity word_match_AxiSlaveMock is
+entity WordMatch_AxiSlaveMock is
   generic (
     ADDR_WIDTH                  : natural := 32;
     DATA_WIDTH                  : natural := 32;
@@ -98,9 +98,9 @@ entity word_match_AxiSlaveMock is
     srec_write                  : in  std_logic := '1'
 
   );
-end word_match_AxiSlaveMock;
+end WordMatch_AxiSlaveMock;
 
-architecture behavior of word_match_AxiSlaveMock is
+architecture behavior of WordMatch_AxiSlaveMock is
 
   constant BUS_SIZE : natural := log2floor(DATA_WIDTH/8);
 
