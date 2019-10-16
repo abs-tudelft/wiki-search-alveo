@@ -612,7 +612,7 @@ begin
         BUS_BURST_STEP_LEN      => BUS_READ_BURST_STEP_LEN,
         BUS_BURST_MAX_LEN       => BUS_READ_BURST_MAX_LEN,
         INDEX_WIDTH             => 32,
-        CFG                     => "listprim(8;epc=8)",
+        CFG                     => "listprim(8;epc=8,idx_fifo_xclk_stages=2,fifo_xclk_stages=2)",
         CMD_TAG_ENABLE          => true,
         CMD_TAG_WIDTH           => 1
       )
