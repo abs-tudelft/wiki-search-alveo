@@ -33,20 +33,25 @@ const char *word_match_last_error() {
  * this function otherwise. If this function returns `false` an error occured;
  * the error message can be retrieved using `word_match_last_error()`.
  */
-bool word_match_init(
-    WordMatchPlatformConfig &config, bool force_reload,
+int word_match_init(
+    WordMatchPlatformConfig *config, int force_reload,
     void (*progress)(void *user, const char *status), void *user)
 {
     try {
 
+        // Check configuration.
+        if (config == nullptr) {
+            throw std::runtime_error("configuration must not be null");
+        }
+
         // Figure out if we need to load the hardware.
-        if (config.xclbin_prefix != nullptr && config.xclbin_prefix[0]) {
-            std::string xclbin_prefix = std::string(config.xclbin_prefix) + "." + config.emu_mode;
+        if (config->xclbin_prefix != nullptr && config->xclbin_prefix[0]) {
+            std::string xclbin_prefix = std::string(config->xclbin_prefix) + "." + config->emu_mode;
             if (force_reload || xclbin_prefix != current_xclbin_prefix) {
 
                 // Reload hardware context.
                 if (progress) progress(user, "Opening new Alveo OpenCL context...");
-                hw_impl = std::make_shared<HardwareWordMatch>(xclbin_prefix, config.kernel_name, true);
+                hw_impl = std::make_shared<HardwareWordMatch>(xclbin_prefix, config->kernel_name, true);
                 current_xclbin_prefix = xclbin_prefix;
                 current_data_prefix = "";
                 if (progress) progress(user, "Opening new Alveo OpenCL context... done");
@@ -64,7 +69,7 @@ bool word_match_init(
         }
 
         // Figure out if we need to reload the data.
-        std::string data_prefix = std::string(config.data_prefix);
+        std::string data_prefix = std::string(config->data_prefix);
         if (data_prefix != current_data_prefix || force_reload) {
             std::vector<std::shared_ptr<WordMatch>> impls;
             if (hw_impl) impls.push_back(hw_impl);
@@ -90,14 +95,19 @@ bool word_match_init(
  * call.
  */
 const WordMatchResults *word_match_run(
-    WordMatchRunConfig &config,
+    WordMatchRunConfig *config,
     void (*progress)(void *user, const char *status), void *user)
 {
     try {
 
+        // Check configuration.
+        if (config == nullptr) {
+            throw std::runtime_error("configuration must not be null");
+        }
+
         // Select which implementation to use.
         std::shared_ptr<HardwareWordMatch> impl;
-        if (!config.mode) {
+        if (!config->mode) {
             if (!hw_impl) {
                 throw std::runtime_error("hardware implementation is not loaded");
             }
@@ -107,7 +117,7 @@ const WordMatchResults *word_match_run(
         }
 
         // Construct the configuration.
-        WordMatchConfig wmc(config.pattern, config.whole_words, config.min_matches);
+        WordMatchConfig wmc(config->pattern, config->whole_words, config->min_matches);
 
         // Run the implementation.
         impl->execute(wmc, progress, user);

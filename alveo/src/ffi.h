@@ -25,7 +25,7 @@ typedef struct {
 
     // Whether the data should remain loaded in memory to allow for software
     // runs.
-    bool keep_loaded;
+    int keep_loaded;
 
 } WordMatchPlatformConfig;
 
@@ -38,11 +38,11 @@ typedef struct {
     const char *pattern;
 
     // Specifies whether whole-word matching should be enabled.
-    bool whole_words;
+    int whole_words;
 
     // Specifies how many matches must exist in a page for the page to be
     // considered to match.
-    bool min_matches;
+    unsigned int min_matches;
 
     // Specifies whether the run should be done on hardware or in software, and
     // how many threads should be used in software mode. 0 indicates hardware,
@@ -121,9 +121,10 @@ const char *word_match_last_error();
  * this function otherwise. If this function returns `false` an error occured;
  * the error message can be retrieved using `word_match_last_error()`.
  */
-bool word_match_init(
-    WordMatchPlatformConfig &config, bool force_reload,
-    void (*progress)(void *user, const char *status), void *user);
+int word_match_init(
+    WordMatchPlatformConfig *config, int force_reload,
+    void (*progress)(void *user, const char *status),
+    void *user);
 
 /**
  * Runs the (previously initialized) word matcher kernels with the given
@@ -134,8 +135,9 @@ bool word_match_init(
  * message can be retrieved using `word_match_last_error()`.
  */
 const WordMatchResults *word_match_run(
-    WordMatchRunConfig &config,
-    void (*progress)(void *user, const char *status), void *user);
+    WordMatchRunConfig *config,
+    void (*progress)(void *user, const char *status),
+    void *user);
 
 /**
  * Free all resources.

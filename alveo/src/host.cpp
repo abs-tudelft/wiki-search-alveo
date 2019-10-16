@@ -28,46 +28,6 @@ int main(int argc, char **argv) {
            "\033[33m%s\033[0m.\033[35m%s\033[0m.<device>.xclbin\n", bin_prefix.c_str(), emu_mode);
     printf(" - kernel name (\033[36marg 3\033[0m):\n   \033[36m%s\033[0m\n\n", kernel_name.c_str());
 
-//     // Construct the managers for the desired word matcher implementations.
-//     std::vector<std::shared_ptr<WordMatch>> impls;
-//
-//     impls.push_back(std::make_shared<HardwareWordMatch>(bin_prefix + "." + emu_mode, kernel_name));
-//
-//     // Load the Wikipedia record batches and distribute them over the kernel
-//     // instances.
-//     WordMatchDatasetLoader(data_prefix).load(impls);
-//
-//     while (true) {
-//
-//         printf("> ");
-//         std::string pattern;
-//         while (true) {
-//             char c = fgetc(stdin);
-//             if (c == '\n') {
-//                 break;
-//             }
-//             pattern += c;
-//         }
-//
-//         if (pattern.empty()) {
-//             return 0;
-//         }
-//
-//         // Generate the implementation-agnostic configuration.
-//         WordMatchConfig config(pattern);
-//
-//         impls[0]->execute(config);
-//
-//         printf("\n%u pages matched & %u total matches within %.6fs\n",
-//             impls[0]->results.num_page_matches, impls[0]->results.num_word_matches,
-//             impls[0]->results.time_taken / 1000000.);
-//         if (impls[0]->results.max_word_matches) {
-//             printf("Best match is \"%s\", coming in at %u matches\n",
-//                 impls[0]->results.max_page_title, impls[0]->results.max_word_matches);
-//         }
-//
-//     }
-
     // Initialize the platform.
     WordMatchPlatformConfig platcfg;
     platcfg.data_prefix = data_prefix.c_str();
@@ -76,7 +36,7 @@ int main(int argc, char **argv) {
     platcfg.kernel_name = kernel_name.c_str();
     platcfg.keep_loaded = false;
     printf("word_match_init...\n");
-    if (!word_match_init(platcfg, false, reporter, NULL)) {
+    if (!word_match_init(&platcfg, false, reporter, NULL)) {
         throw std::runtime_error(word_match_last_error());
     }
 
@@ -105,7 +65,7 @@ int main(int argc, char **argv) {
             runcfg.min_matches = 1;
             runcfg.mode = 0;
             printf("word_match_run...\n");
-            auto results = word_match_run(runcfg, reporter, NULL);
+            auto results = word_match_run(&runcfg, reporter, NULL);
             if (results == nullptr) {
                 throw std::runtime_error(word_match_last_error());
             }
