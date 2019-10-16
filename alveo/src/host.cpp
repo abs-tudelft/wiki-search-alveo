@@ -29,19 +29,241 @@ public:
 };
 
 /**
- * Represents an input record batch for the word matcher.
+ * Partial results of a single instance of the word match kernel, C-style for
+ * IPC.
  */
-class WordMatchDataset {
-private:
-    std::vector<std::shared_ptr<arrow::RecordBatch>> chunks;
+typedef struct {
 
+    // Total number of matched words accross all pages.
+    unsigned int num_word_matches;
+
+    // Total number of matched pages.
+    unsigned int num_page_matches;
+
+    // Info about the first N matched pages.
+    unsigned int num_page_match_records;
+    const unsigned int *page_match_counts;
+    const unsigned int *page_match_title_offsets;
+    const char *page_match_title_values;
+
+    // Info about the page with the most matches.
+    unsigned int max_word_matches;
+    const char *max_page_title;
+
+    // Number of (bus) cycles taken, or 0 for the software implementation.
+    unsigned int cycle_count;
+
+    // Total amount of time taken (including overhead in starting the kernel
+    // and transferring results back) in microseconds.
+    unsigned int time_taken;
+
+} WordMatchPartialResults;
+
+/**
+ * Complete result set for a single kernel invocation, C-style for IPC.
+ */
+typedef struct {
+
+    // Total number of matched words accross all pages.
+    unsigned int num_word_matches;
+
+    // Total number of matched pages.
+    unsigned int num_page_matches;
+
+    // Info about the page with the most matches.
+    unsigned int max_word_matches;
+    const char *max_page_title;
+
+    // Total amount of time taken in microseconds.
+    unsigned int time_taken;
+
+    // Partial results for each individual kernel invocation.
+    unsigned int num_partial_results;
+    WordMatchPartialResults *partial_results;
+
+} WordMatchResults;
+
+/**
+ * Wrapper for `WordMatchPartialResults` that owns all contained data
+ * STL-container style.
+ */
+class WordMatchPartialResultsContainer : public WordMatchPartialResults {
+public:
+    std::vector<unsigned int> cpp_page_match_counts;
+    std::vector<unsigned int> cpp_page_match_title_offsets;
+    std::string cpp_page_match_title_values;
+    std::string cpp_max_page_title;
+
+    /**
+     * Updates the pointers in the C struct to point to the STL containers.
+     * Must be called after any of the containers are resized/reallocated.
+     */
+    void synchronize() {
+        max_page_title = cpp_max_page_title.c_str();
+        num_page_match_records = cpp_page_match_counts.size();
+        page_match_counts = cpp_page_match_counts.data();
+        page_match_title_offsets = cpp_page_match_title_offsets.data();
+        page_match_title_values = cpp_page_match_title_values.c_str();
+    }
+};
+
+/**
+ * Wrapper for `WordMatchResults` that owns all contained data STL-container
+ * style.
+ */
+class WordMatchResultsContainer : public WordMatchResults {
+public:
+    std::vector<WordMatchPartialResultsContainer> cpp_partial_results;
+
+    /**
+     * Updates the pointers in the C struct to point to the STL containers.
+     * Must be called after any of the containers are resized/reallocated.
+     */
+    void synchronize() {
+        num_partial_results = cpp_partial_results.size();
+        partial_results = cpp_partial_results.data();
+    }
+};
+
+/**
+ * Base class for word matcher kernel implementations.
+ */
+class WordMatch {
 public:
 
     /**
-     * Loads a single record batch file and appends it to this dataset. No
-     * prints.
+     * Container for the latest batch of results, updated by `execute()`.
      */
-    void push_chunk(const std::string &fname) {
+    WordMatchResultsContainer results;
+
+    /**
+     * Resets the dataset stored in device memory.
+     */
+    virtual void clear_chunks() = 0;
+
+    /**
+     * Adds the given chunk to the dataset stored in device memory.
+     */
+    virtual void add_chunk(const std::shared_ptr<arrow::RecordBatch> &batch) = 0;
+
+    /**
+     * Runs the kernel with the given configuration. The results are written to
+     * `this->results`.
+     */
+    virtual void execute(const WordMatchConfig &config) = 0;
+
+};
+
+#if 0
+// /**
+//  * Represents an set of input record batches for the word matcher, stored in
+//  * host memory.
+//  */
+// class WordMatchDataset {
+// private:
+//     std::vector<std::shared_ptr<arrow::RecordBatch>> chunks;
+//
+// public:
+//
+//     /**
+//      * Adds the given chunk to the dataset.
+//      */
+//     void add_chunk(std::shared_ptr<arrow::RecordBatch> chunk) {
+//         chunks.push_back(chunk);
+//     }
+//
+//     /**
+//      * Clears all the chunks out of this dataset.
+//      */
+//     void clear() {
+//         chunks.clear();
+//     }
+//
+//     /**
+//      * Returns the number of loaded chunks.
+//      */
+//     unsigned int size() const {
+//         return chunks.size();
+//     }
+//
+//     /**
+//      * Returns the record batch for the given chunk index for the hardware
+//      * implementation.
+//      */
+//     std::shared_ptr<arrow::RecordBatch> get_chunk(int index = -1) {
+//         if (index < 0) {
+//             return chunks.back();
+//         } else {
+//             return chunks[index];
+//         }
+//     }
+//
+//     /**
+//      * Returns the entire dataset as an arrow table for the software
+//      * implementation.
+//      */
+//     std::shared_ptr<arrow::Table> as_table() {
+//         std::shared_ptr<arrow::Table> table;
+//         arrow::Status status = arrow::Table::FromRecordBatches(chunks, &table);
+//         if (!status.ok()) {
+//             throw std::runtime_error("Table::FromRecordBatches failed: " + status.ToString());
+//         }
+//         return table;
+//     }
+//
+// };
+#endif
+
+/**
+ * Helper class to load datasets one chunk at a time.
+ */
+class WordMatchDatasetLoader {
+private:
+    std::string prefix;
+    unsigned int num_batches;
+    unsigned int cur_batch;
+    bool quiet;
+public:
+
+    /**
+     * Initializes a dataset loader with the given prefix, loading record
+     * batches with filenames of the form `[prefix]-[index].rb`, with `[index]`
+     * starting at 0.
+     */
+    WordMatchDatasetLoader(const std::string &prefix, bool quiet=false)
+        : prefix(prefix), num_batches(0), cur_batch(0), quiet(quiet)
+    {
+
+        // Figure out how many batches there are.
+        for (;; num_batches++) {
+            std::string batch_filename = prefix + "-" + std::to_string(num_batches) + ".rb";
+            if (access(batch_filename.c_str(), F_OK) == -1) {
+                break;
+            }
+        }
+        if (!num_batches) {
+            throw std::runtime_error("no record batches found for prefix " + prefix);
+        }
+
+        if (!quiet) printf("\n");
+    }
+
+    /**
+     * Loads and returns a pointer to the next record batch. Returns `nullptr`
+     * after the last batch.
+     */
+    std::shared_ptr<arrow::RecordBatch> next() {
+
+        // Handle end of iteration.
+        if (cur_batch >= num_batches) {
+            if (!quiet) printf("\033[A\033[KLoading dataset %s... done\n", prefix.c_str());
+            return nullptr;
+        }
+
+        // Load the next chunk.
+        if (!quiet) printf("\033[A\033[KLoading dataset %s... batch %u/%u (load)\n",
+            prefix.c_str(), cur_batch, num_batches);
+        std::string fname = prefix + "-" + std::to_string(cur_batch) + ".rb";
 
         // Load the RecordBatch into the default memory pool as a single blob
         // of data.
@@ -63,6 +285,8 @@ public:
 
         // In order to make the buffers individually freeable and aligned, we
         // unfortunately need to copy the resulting RecordBatch entirely.
+        if (!quiet) printf("\033[A\033[KLoading dataset %s... batch %u/%u (align)\n",
+            prefix.c_str(), cur_batch, num_batches);
         std::vector<std::shared_ptr<arrow::ArrayData>> columns;
         for (int col_idx = 0; col_idx < batch->num_columns(); col_idx++) {
             std::shared_ptr<arrow::ArrayData> column = batch->column_data(col_idx);
@@ -84,47 +308,27 @@ public:
         }
         batch = arrow::RecordBatch::Make(batch->schema(), batch->num_rows(), columns);
 
-        // Push the copied RecordBatch.
-        chunks.push_back(batch);
+        // Transfer ownership to the caller.
+        if (!quiet) printf("\033[A\033[KLoading dataset %s... batch %u/%u (xfer)\n",
+            prefix.c_str(), cur_batch, num_batches);
+        cur_batch++;
+        return batch;
+
     }
 
     /**
-     * Clears all the chunks out of this dataset.
+     * Loads all (remaining) chunks into the given set of word matcher
+     * implementations.
      */
-    void clear() {
-        chunks.clear();
-    }
-
-    /**
-     * Returns the number of loaded chunks.
-     */
-    unsigned int size() const {
-        return chunks.size();
-    }
-
-    /**
-     * Returns the record batch for the given chunk index for the hardware
-     * implementation.
-     */
-    std::shared_ptr<arrow::RecordBatch> get_chunk(int index = -1) {
-        if (index < 0) {
-            return chunks.back();
-        } else {
-            return chunks[index];
+    void load(std::vector<std::shared_ptr<WordMatch>> impls) {
+        for (auto impl : impls) {
+            impl->clear_chunks();
         }
-    }
-
-    /**
-     * Returns the entire dataset as an arrow table for the software
-     * implementation.
-     */
-    std::shared_ptr<arrow::Table> as_table() {
-        std::shared_ptr<arrow::Table> table;
-        arrow::Status status = arrow::Table::FromRecordBatches(chunks, &table);
-        if (!status.ok()) {
-            throw std::runtime_error("Table::FromRecordBatches failed: " + status.ToString());
+        while (auto chunk = next()) {
+            for (auto impl : impls) {
+                impl->add_chunk(chunk);
+            }
         }
-        return table;
     }
 
 };
@@ -160,7 +364,7 @@ public:
 };
 
 /**
- * Class used internally by HardwareWordMatch to keep track of the buffers for a given
+ * Class used internally by HardwareWordMatchKernel to keep track of the buffers for a given
  * record batch.
  */
 class HardwareWordMatchDataChunk {
@@ -219,7 +423,7 @@ public:
  * Manages a word matcher kernel, operating on a fixed record batch that is
  * only loaded once.
  */
-class HardwareWordMatch {
+class HardwareWordMatchKernel {
 private:
 
     AlveoKernelInstance &context;
@@ -244,9 +448,17 @@ private:
 
 public:
 
-    HardwareWordMatch(const HardwareWordMatch&) = delete;
+    HardwareWordMatchKernel(const HardwareWordMatchKernel&) = delete;
 
-    HardwareWordMatch(AlveoKernelInstance &context, int num_results = 32)
+    /**
+     * Resets the dataset stored in device memory.
+     */
+    void clear_chunks() {
+        chunks.clear();
+        current_chunk = 0xFFFFFFFF;
+    }
+
+    HardwareWordMatchKernel(AlveoKernelInstance &context, int num_results = 32)
         : context(context), num_results(num_results)
     {
 
@@ -279,7 +491,8 @@ public:
         context.set_arg(9, (unsigned int)num_results);
         context.set_arg(10, result_stats->buffer);
 
-        current_chunk = 0xFFFFFFFF;
+        // Reset the dataset.
+        clear_chunks();
     }
 
     /**
@@ -379,6 +592,170 @@ public:
         return HardwareWordMatchStats(*result_stats, chunks[current_chunk]);
     }
 
+    /**
+     * Loads the results for the most recent run into the given result buffer.
+     */
+    void get_results(WordMatchPartialResultsContainer &results) {
+
+        // Read the statistics buffer.
+        unsigned int data[4];
+        result_stats->read(&data, 0, sizeof(data));
+
+        // Interpret the statistics buffer.
+        results.num_page_matches = data[0];
+        results.num_word_matches = data[1];
+        results.max_word_matches = data[2] >> 20;
+        unsigned int max_page_idx = data[2] & 0xFFFFF;
+        results.cycle_count = data[3];
+
+        // Find the title of the page with the most matches.
+        auto &chunk = chunks[current_chunk];
+        if (max_page_idx < chunk.num_rows) {
+            const uint32_t *offsets = (const uint32_t*)chunk.arrow_title_offsets->data();
+            uint32_t start = offsets[max_page_idx];
+            uint32_t end = offsets[max_page_idx + 1];
+            results.cpp_max_page_title = std::string((const char*)chunk.arrow_title_values->data() + start, end - start);
+        } else {
+            results.cpp_max_page_title = "<OUT-OF-RANGE>";
+        }
+
+        // Determine how many valid match results we have in the result
+        // buffers.
+        unsigned int result_count = results.num_page_matches;
+        if (result_count > num_results) result_count = num_results;
+
+        // Read match count per page buffer.
+        results.cpp_page_match_counts.resize(result_count);
+        result_matches->read(
+            results.cpp_page_match_counts.data(),
+            0, result_count * 4);
+
+        // Read title offset buffer.
+        results.cpp_page_match_title_offsets.resize(result_count + 1);
+        result_title_offset->read(
+            results.cpp_page_match_title_offsets.data(),
+            0, (result_count + 1) * 4);
+
+        // Read title values buffer.
+        results.cpp_page_match_title_values.resize(results.cpp_page_match_title_offsets.back());
+        result_title_values->read(
+            &results.cpp_page_match_title_values.front(),
+            0, results.cpp_page_match_title_offsets.back());
+
+        // Synchronize the results buffer.
+        results.synchronize();
+
+    }
+
+    /**
+     * Synchronously runs the kernel for the given chunk index, writing the
+     * results (including execution time) to the given results buffer.
+     */
+    void execute_chunk(unsigned int chunk, WordMatchPartialResultsContainer &results) {
+        auto start = std::chrono::high_resolution_clock::now();
+        enqueue_for_chunk(chunk)->wait();
+        get_results(results);
+        auto elapsed = std::chrono::high_resolution_clock::now() - start;
+        results.time_taken = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+    }
+
+};
+
+/**
+ * Alveo hardware implementation of the word matcher kernel.
+ */
+class HardwareWordMatch : public WordMatch {
+private:
+    AlveoContext context;
+    std::vector<std::shared_ptr<HardwareWordMatchKernel>> kernels;
+    unsigned int round_robin_state;
+    unsigned int num_batches;
+
+public:
+
+    /**
+     * Constructs the word matcher from an xclbin prefix excluding the
+     * `.[device].xclbin` suffix (this is chosen automatically), and the name
+     * of the kernel in the xclbin file.
+     */
+    HardwareWordMatch(const std::string &bin_prefix, const std::string &kernel_name)
+        : context(bin_prefix, kernel_name)
+    {
+
+        // Construct HardwareWordMatchKernel objects for each subdevice.
+        for (auto instance : context.instances) {
+            kernels.push_back(std::make_shared<HardwareWordMatchKernel>(*instance));
+        }
+
+    }
+
+    /**
+     * Resets the dataset stored in device memory.
+     */
+    virtual void clear_chunks() {
+        for (auto kernel : kernels) {
+            kernel->clear_chunks();
+        }
+        round_robin_state = 0;
+        num_batches = 0;
+    }
+
+    /**
+     * Adds the given chunk to the dataset stored in device memory.
+     */
+    virtual void add_chunk(const std::shared_ptr<arrow::RecordBatch> &batch) {
+        round_robin_state %= kernels.size();
+        kernels[round_robin_state]->add_chunk(batch);
+        round_robin_state++;
+        num_batches++;
+    }
+
+    /**
+     * Runs the kernel with the given configuration.
+     */
+    virtual void execute(const WordMatchConfig &config) {
+
+        // Generate the hardware configuration.
+        HardwareWordMatchConfig hw_config(config);
+
+        // Resize the results buffer.
+        results.cpp_partial_results.resize(num_batches);
+
+        // Start measuring execution time.
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // Run the kernels.
+        omp_set_dynamic(0);
+        omp_set_num_threads(kernels.size());
+        #pragma omp parallel for firstprivate(kernels)
+        for (unsigned int i = 0; i < kernels.size(); i++) {
+            kernels[i]->configure(hw_config);
+            for (unsigned int j = 0; j < kernels[i]->size(); j++) {
+                kernels[i]->execute_chunk(j, this->results.cpp_partial_results[j * kernels.size() + i]);
+            }
+        }
+
+        // Combine the results.
+        results.num_word_matches = 0;
+        results.num_page_matches = 0;
+        results.max_word_matches = 0;
+        for (unsigned int i = 0; i < num_batches; i++) {
+            results.num_word_matches += results.cpp_partial_results[i].num_word_matches;
+            results.num_page_matches += results.cpp_partial_results[i].num_page_matches;
+            if (results.cpp_partial_results[i].max_word_matches >= results.max_word_matches) {
+                results.max_word_matches = results.cpp_partial_results[i].max_word_matches;
+                results.max_page_title = results.cpp_partial_results[i].max_page_title;
+            }
+        }
+
+        // Finish measuring execution time.
+        auto elapsed = std::chrono::high_resolution_clock::now() - start;
+        results.time_taken = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+
+        results.synchronize();
+
+    }
+
 };
 
 int main(int argc, char **argv) {
@@ -401,51 +778,14 @@ int main(int argc, char **argv) {
            "\033[33m%s\033[0m.\033[35m%s\033[0m.<device>.xclbin\n", bin_prefix.c_str(), emu_mode);
     printf(" - kernel name (\033[36marg 3\033[0m):\n   \033[36m%s\033[0m\n\n", kernel_name.c_str());
 
-    // Create the context.
-    AlveoContext context(bin_prefix + "." + emu_mode, kernel_name);
+    // Construct the managers for the desired word matcher implementations.
+    std::vector<std::shared_ptr<WordMatch>> impls;
 
-    // Construct HardwareWordMatch objects for each subdevice.
-    std::vector<std::shared_ptr<HardwareWordMatch>> matchers;
-    for (auto instance : context.instances) {
-        matchers.push_back(std::make_shared<HardwareWordMatch>(*instance));
-    }
-
-    WordMatchDataset dataset;
+    impls.push_back(std::make_shared<HardwareWordMatch>(bin_prefix + "." + emu_mode, kernel_name));
 
     // Load the Wikipedia record batches and distribute them over the kernel
     // instances.
-    unsigned int num_batches = 0;
-    for (;; num_batches++) {
-        std::string batch_filename = data_prefix + "-" + std::to_string(num_batches) + ".rb";
-        if (access(batch_filename.c_str(), F_OK) == -1) {
-            break;
-        }
-    }
-    if (!num_batches) {
-        throw std::runtime_error("no record batches found for prefix " + data_prefix);
-    }
-    dataset.clear();
-    printf("\n");
-    for (unsigned int batch = 0, matcher = 0; batch < num_batches; batch++, matcher++, matcher %= matchers.size()) {
-
-        // Load chunk.
-        printf("\033[A\033[KLoading dataset %s... batch %u/%u (load)\n",
-            data_prefix.c_str(), batch, num_batches);
-        dataset.push_chunk(data_prefix + "-" + std::to_string(batch) + ".rb");
-
-        // Transfer to device.
-        printf("\033[A\033[KLoading dataset %s... batch %u/%u (xfer to %u)\n",
-            data_prefix.c_str(), batch, num_batches, matcher);
-        matchers[matcher]->add_chunk(dataset.get_chunk());
-
-        // Save memory when software runs are not needed by freeing the article
-        // text buffers.
-        printf("\033[A\033[KLoading dataset %s... batch %u/%u (free)\n",
-           data_prefix.c_str(), batch, num_batches);
-        dataset.clear();
-
-    }
-    printf("\033[A\033[KLoading dataset %s... done\n", data_prefix.c_str());
+    WordMatchDatasetLoader(data_prefix).load(impls);
 
     while (true) {
 
@@ -463,43 +803,17 @@ int main(int argc, char **argv) {
             return 0;
         }
 
+        // Generate the implementation-agnostic configuration.
         WordMatchConfig config(pattern);
-        HardwareWordMatchConfig hw_config(config);
 
-//         // Enqueue kernel runs.
-//         AlveoEvents events;
-//         for (unsigned int i = 0; i < matchers.size(); i++) {
-//             if (!matchers[i]->size()) continue;
-//             printf("queue matcher %d...\n", i);
-//             matchers[i]->configure(hw_config);
-//             matchers[i]->enqueue_for_chunk(0), events);
-//         }
-//
-//         // Wait for completion on all kernels.
-//         printf("wait for matchers...\n");
-//         events.wait();
+        impls[0]->execute(config);
 
-        omp_set_dynamic(0);
-        omp_set_num_threads(matchers.size());
-        #pragma omp parallel for firstprivate(matchers)
-        for (unsigned int i = 0; i < matchers.size(); i++) {
-            if (!matchers[i]->size()) continue;
-            int tid = omp_get_thread_num();
-            printf("Hello world from omp thread %d\n", tid);
-            matchers[i]->configure(hw_config);
-            matchers[i]->enqueue_for_chunk(0)->wait();
-        }
-
-        // Print stats.
-        for (unsigned int i = 0; i < matchers.size(); i++) {
-            if (!matchers[i]->size()) continue;
-            auto stats = matchers[i]->get_stats();
-            printf("matcher %2d: %5u pages matched & %5u total matches within %u cycles (= %.6fs at 200MHz).\n",
-                i, stats.num_page_matches, stats.num_word_matches, stats.cycle_count, stats.cycle_count / 200000000.);
-            if (stats.max_word_matches) {
-                printf("  best match is \"%s\", coming in at %u matches\n",
-                    stats.max_page_title.c_str(), stats.max_word_matches);
-            }
+        printf("\n%u pages matched & %u total matches within %.6fs\n",
+            impls[0]->results.num_page_matches, impls[0]->results.num_word_matches,
+            impls[0]->results.time_taken / 1000000.);
+        if (impls[0]->results.max_word_matches) {
+            printf("Best match is \"%s\", coming in at %u matches\n",
+                impls[0]->results.max_page_title, impls[0]->results.max_word_matches);
         }
 
     }
