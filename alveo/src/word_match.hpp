@@ -65,6 +65,8 @@ public:
      */
     WordMatchResultsContainer results;
 
+    virtual ~WordMatch() = default;
+
     /**
      * Resets the dataset stored in device memory.
      */
@@ -79,7 +81,9 @@ public:
      * Runs the kernel with the given configuration. The results are written to
      * `this->results`.
      */
-    virtual void execute(const WordMatchConfig &config) = 0;
+    virtual void execute(
+        const WordMatchConfig &config,
+        void (*progress)(void *user, const char *status), void *progress_user) = 0;
 
 };
 
@@ -91,7 +95,14 @@ private:
     std::string prefix;
     unsigned int num_batches;
     unsigned int cur_batch;
-    bool quiet;
+    void (*progress)(void *user, const char *status);
+    void *progress_user;
+
+    /**
+     * Calls the progress() callback (if any) with the updated state.
+     */
+    void set_state(const std::string &state);
+
 public:
 
     /**
@@ -99,7 +110,7 @@ public:
      * batches with filenames of the form `[prefix]-[index].rb`, with `[index]`
      * starting at 0.
      */
-    WordMatchDatasetLoader(const std::string &prefix, bool quiet=false);
+    WordMatchDatasetLoader(const std::string &prefix, void (*progress)(void *user, const char *status), void *user);
 
     /**
      * Loads and returns a pointer to the next record batch. Returns `nullptr`

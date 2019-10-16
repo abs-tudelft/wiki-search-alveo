@@ -29,8 +29,10 @@ void WordMatchResultsContainer::synchronize() {
  * batches with filenames of the form `[prefix]-[index].rb`, with `[index]`
  * starting at 0.
  */
-WordMatchDatasetLoader::WordMatchDatasetLoader(const std::string &prefix, bool quiet)
-    : prefix(prefix), num_batches(0), cur_batch(0), quiet(quiet)
+WordMatchDatasetLoader::WordMatchDatasetLoader(
+    const std::string &prefix,
+    void (*progress)(void *user, const char *status), void *user)
+    : prefix(prefix), num_batches(0), cur_batch(0), progress(progress), progress_user(user)
 {
 
     // Figure out how many batches there are.
@@ -44,7 +46,21 @@ WordMatchDatasetLoader::WordMatchDatasetLoader(const std::string &prefix, bool q
         throw std::runtime_error("no record batches found for prefix " + prefix);
     }
 
-    if (!quiet) printf("\n");
+}
+
+/**
+ * Calls the progress() callback (if any) with the updated state.
+ */
+void WordMatchDatasetLoader::set_state(const std::string &state) {
+    if (!progress) return;
+    std::string msg ="Loading dataset " + prefix + "... ";
+    if (cur_batch < num_batches) {
+        msg += "batch " + std::to_string(cur_batch + 1) + "/" + std::to_string(num_batches);
+        msg += " (" + state + ")";
+    } else {
+        msg += state;
+    }
+    progress(progress_user, msg.c_str());
 }
 
 /**
@@ -55,13 +71,12 @@ std::shared_ptr<arrow::RecordBatch> WordMatchDatasetLoader::next() {
 
     // Handle end of iteration.
     if (cur_batch >= num_batches) {
-        if (!quiet) printf("\033[A\033[KLoading dataset %s... done\n", prefix.c_str());
+        set_state("done");
         return nullptr;
     }
 
     // Load the next chunk.
-    if (!quiet) printf("\033[A\033[KLoading dataset %s... batch %u/%u (load)\n",
-        prefix.c_str(), cur_batch, num_batches);
+    set_state("load");
     std::string fname = prefix + "-" + std::to_string(cur_batch) + ".rb";
 
     // Load the RecordBatch into the default memory pool as a single blob
@@ -84,8 +99,7 @@ std::shared_ptr<arrow::RecordBatch> WordMatchDatasetLoader::next() {
 
     // In order to make the buffers individually freeable and aligned, we
     // unfortunately need to copy the resulting RecordBatch entirely.
-    if (!quiet) printf("\033[A\033[KLoading dataset %s... batch %u/%u (align)\n",
-        prefix.c_str(), cur_batch, num_batches);
+    set_state("align");
     std::vector<std::shared_ptr<arrow::ArrayData>> columns;
     for (int col_idx = 0; col_idx < batch->num_columns(); col_idx++) {
         std::shared_ptr<arrow::ArrayData> column = batch->column_data(col_idx);
@@ -108,8 +122,7 @@ std::shared_ptr<arrow::RecordBatch> WordMatchDatasetLoader::next() {
     batch = arrow::RecordBatch::Make(batch->schema(), batch->num_rows(), columns);
 
     // Transfer ownership to the caller.
-    if (!quiet) printf("\033[A\033[KLoading dataset %s... batch %u/%u (xfer)\n",
-        prefix.c_str(), cur_batch, num_batches);
+    set_state("xfer");
     cur_batch++;
     return batch;
 

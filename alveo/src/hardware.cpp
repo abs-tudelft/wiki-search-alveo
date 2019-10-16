@@ -1,6 +1,7 @@
 
 #include "hardware.hpp"
 #include <omp.h>
+#include <mutex>
 
 /**
  * Constructs a search command for the hardware word matcher kernel.
@@ -270,7 +271,15 @@ void HardwareWordMatch::add_chunk(const std::shared_ptr<arrow::RecordBatch> &bat
 /**
  * Runs the kernel with the given configuration.
  */
-void HardwareWordMatch::execute(const WordMatchConfig &config) {
+void HardwareWordMatch::execute(
+    const WordMatchConfig &config,
+    void (*progress)(void *user, const char *status), void *progress_user
+) {
+
+    if (progress) {
+        std::string msg = "Running on hardware... completed 0/" + std::to_string(num_batches);
+        progress(progress_user, msg.c_str());
+    }
 
     // Generate the hardware configuration.
     HardwareWordMatchConfig hw_config(config);
@@ -284,11 +293,19 @@ void HardwareWordMatch::execute(const WordMatchConfig &config) {
     // Run the kernels.
     omp_set_dynamic(0);
     omp_set_num_threads(kernels.size());
-    #pragma omp parallel for firstprivate(kernels)
+    unsigned int chunks_complete = 0;
+    static std::mutex progress_mutex;
+    #pragma omp parallel for
     for (unsigned int i = 0; i < kernels.size(); i++) {
         kernels[i]->configure(hw_config);
         for (unsigned int j = 0; j < kernels[i]->size(); j++) {
             kernels[i]->execute_chunk(j, this->results.cpp_partial_results[j * kernels.size() + i]);
+            if (progress) {
+                std::lock_guard<std::mutex> lock(progress_mutex);
+                chunks_complete++;
+                std::string msg = "Running on hardware... completed " + std::to_string(chunks_complete) + "/" + std::to_string(num_batches);
+                progress(progress_user, msg.c_str());
+            }
         }
     }
 
@@ -308,6 +325,10 @@ void HardwareWordMatch::execute(const WordMatchConfig &config) {
     // Finish measuring execution time.
     auto elapsed = std::chrono::high_resolution_clock::now() - start;
     results.time_taken = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();
+    if (progress) {
+        std::string msg = "Running on hardware... done";
+        progress(progress_user, msg.c_str());
+    }
 
     results.synchronize();
 

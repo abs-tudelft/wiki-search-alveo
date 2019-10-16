@@ -132,6 +132,8 @@ private:
 
 public:
 
+    virtual ~HardwareWordMatch() = default;
+
     /**
      * Constructs the word matcher from an xclbin prefix excluding the
      * `.[device].xclbin` suffix (this is chosen automatically), and the name
@@ -152,6 +154,7 @@ public:
     /**
      * Runs the kernel with the given configuration.
      */
-    virtual void execute(const WordMatchConfig &config);
+    virtual void execute(const WordMatchConfig &config,
+        void (*progress)(void *user, const char *status), void *progress_user);
 
 };
