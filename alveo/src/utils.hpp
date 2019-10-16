@@ -1,14 +1,7 @@
 #pragma once
 
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <inttypes.h>
 #include <string>
-#include <memory>
 
 /**
  * Manages a memory-mapped file.

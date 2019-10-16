@@ -2,18 +2,8 @@
 
 #include "utils.hpp"
 #include "xcl2.hpp"
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <inttypes.h>
 #include <string>
 #include <memory>
-#include <arrow/api.h>
-#include <arrow/io/api.h>
-#include <arrow/ipc/api.h>
 
 /**
  * Manages a kernel instance and its associated OpenCL (sub)context and queue.

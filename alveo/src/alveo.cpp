@@ -1,5 +1,8 @@
 
 #include "alveo.hpp"
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 AlveoKernelInstance::AlveoKernelInstance(cl_device_id device, cl_program program, const std::string &kernel_name) : device(device) {
 

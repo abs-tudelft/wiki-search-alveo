@@ -1,5 +1,10 @@
 
 #include "utils.hpp"
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <stdexcept>
 
 /**
  * Constructs a memory-mapped file.
