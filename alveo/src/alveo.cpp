@@ -353,12 +353,20 @@ std::shared_ptr<AlveoEvents> AlveoBuffer::write(const void *data) {
 /**
  * Synchronously reads data from the buffer.
  */
-void AlveoBuffer::read(void *data) {
+void AlveoBuffer::read(void *data, size_t offset, ssize_t size) {
     if (fake_host_ptr != NULL) {
         throw std::runtime_error("cannot read from buffer, host ptr is fake");
     }
+    size_t read_size = this->size;
+    if (size >= 0) read_size = (size_t)size;
+    if (read_size + offset > this->size) {
+        throw std::runtime_error("offset + size out of range");
+    }
+    if (!read_size) {
+        return;
+    }
     cl_int err = clEnqueueReadBuffer(
-        context.queue, buffer, CL_TRUE, 0, size, data, 0, NULL, NULL);
+        context.queue, buffer, CL_TRUE, offset, read_size, data, 0, NULL, NULL);
     if (err != CL_SUCCESS) {
         throw std::runtime_error("clEnqueueReadBuffer() failed");
     }

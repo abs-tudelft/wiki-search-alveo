@@ -136,7 +136,7 @@ public:
     /**
      * Synchronously reads data from the buffer.
      */
-    void read(void *data);
+    void read(void *data, size_t offset=0, ssize_t size=-1);
 
     /**
      * Returns the size of the buffer.
