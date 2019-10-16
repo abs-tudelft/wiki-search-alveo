@@ -139,7 +139,7 @@ public:
      * `.[device].xclbin` suffix (this is chosen automatically), and the name
      * of the kernel in the xclbin file.
      */
-    HardwareWordMatch(const std::string &bin_prefix, const std::string &kernel_name);
+    HardwareWordMatch(const std::string &bin_prefix, const std::string &kernel_name, bool quiet=false);
 
     /**
      * Resets the dataset stored in device memory.

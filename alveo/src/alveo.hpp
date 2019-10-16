@@ -42,7 +42,7 @@ public:
     std::vector<std::shared_ptr<AlveoKernelInstance>> instances;
 
     AlveoContext(const AlveoContext&) = delete;
-    AlveoContext(const std::string &bin_prefix, const std::string &kernel_name);
+    AlveoContext(const std::string &bin_prefix, const std::string &kernel_name, bool quiet = false);
     ~AlveoContext();
 
 };

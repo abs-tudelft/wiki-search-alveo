@@ -236,8 +236,8 @@ void HardwareWordMatchKernel::execute_chunk(unsigned int chunk, WordMatchPartial
  * `.[device].xclbin` suffix (this is chosen automatically), and the name
  * of the kernel in the xclbin file.
  */
-HardwareWordMatch::HardwareWordMatch(const std::string &bin_prefix, const std::string &kernel_name)
-    : context(bin_prefix, kernel_name)
+HardwareWordMatch::HardwareWordMatch(const std::string &bin_prefix, const std::string &kernel_name, bool quiet)
+    : context(bin_prefix, kernel_name, quiet)
 {
 
     // Construct HardwareWordMatchKernel objects for each subdevice.
