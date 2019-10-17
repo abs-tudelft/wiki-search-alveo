@@ -73,8 +73,15 @@ typedef struct {
     unsigned int max_word_matches;
     const char *max_page_title;
 
-    // Number of (bus) cycles taken, or 0 for the software implementation.
+    // Number of (bus) cycles taken and the frequency of that clock, or 0 for
+    // the software implementation.
     unsigned int cycle_count;
+    float clock_frequency;
+
+    // The approximate size of the input data to compute bandwidth (this is the
+    // sum of the number of bytes in the article text values and offset
+    // buffers).
+    unsigned long long data_size;
 
     // Total amount of time taken (including overhead in starting the kernel
     // and transferring results back) in microseconds.
@@ -102,9 +109,25 @@ typedef struct {
 
     // Partial results for each individual kernel invocation.
     unsigned int num_partial_results;
-    WordMatchPartialResults *partial_results;
+    WordMatchPartialResults **partial_results;
 
 } WordMatchResults;
+
+/**
+ * Alveo board health information record.
+ */
+typedef struct {
+
+    // FPGA temperature.
+    float fpga_temp;
+
+    // 12V input power.
+    float power_in;
+
+    // VccINT rail power.
+    float power_vccint;
+
+} WordMatchHealthInfo;
 
 /**
  * Returns the most recent error message.
@@ -138,6 +161,11 @@ const WordMatchResults *word_match_run(
     WordMatchRunConfig *config,
     void (*progress)(void *user, const char *status),
     void *user);
+
+/**
+ * Queries health information from the Alveo board.
+ */
+WordMatchHealthInfo word_match_health();
 
 /**
  * Free all resources.

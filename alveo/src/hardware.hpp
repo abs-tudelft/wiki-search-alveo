@@ -44,6 +44,9 @@ private:
     unsigned int num_results;
     int bank;
 
+    float clock0;
+    float clock1;
+
     // Input buffers.
     std::vector<HardwareWordMatchDataChunk> chunks;
     unsigned int current_chunk;
@@ -66,7 +69,9 @@ public:
      */
     void clear_chunks();
 
-    HardwareWordMatchKernel(AlveoKernelInstance &context, int num_results = 32);
+    HardwareWordMatchKernel(
+        AlveoKernelInstance &context,
+        float clock0, float clock1, int num_results = 32);
 
     /**
      * Loads a recordbatch into the on-device OpenCL buffers for this instance.

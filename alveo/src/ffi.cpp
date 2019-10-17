@@ -1,6 +1,7 @@
 
 #include "ffi.h"
 #include "hardware.hpp"
+#include "xbutil.hpp"
 #include <string>
 #include <memory>
 
@@ -129,6 +130,19 @@ const WordMatchResults *word_match_run(
         last_error = e.what();
         return nullptr;
     }
+}
+
+/**
+ * Queries health information from the Alveo board.
+ */
+WordMatchHealthInfo word_match_health() {
+    WordMatchHealthInfo result;
+    XBUtilDumpInfo info;
+    xbutil_dump(info);
+    result.fpga_temp = info.fpga_temp;
+    result.power_in = info.power_in;
+    result.power_vccint = info.power_vccint;
+    return result;
 }
 
 /**

@@ -46,6 +46,7 @@ public:
 class WordMatchResultsContainer : public WordMatchResults {
 public:
     std::vector<WordMatchPartialResultsContainer> cpp_partial_results;
+    std::vector<WordMatchPartialResults*> cpp_partial_result_ptrs;
 
     /**
      * Updates the pointers in the C struct to point to the STL containers.

@@ -63,8 +63,8 @@ LDFLAGS += $(arrow_LDFLAGS)
 CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++14
 LDFLAGS += $(opencl_LDFLAGS)
 
-HOST_SRCS += src/alveo.cpp src/utils.cpp src/word_match.cpp src/hardware.cpp src/ffi.cpp
-HOST_HDRS += src/alveo.hpp src/utils.hpp src/word_match.hpp src/hardware.hpp src/ffi.h
+HOST_SRCS += src/alveo.cpp src/utils.cpp src/word_match.cpp src/hardware.cpp src/xbutil.cpp src/ffi.cpp
+HOST_HDRS += src/alveo.hpp src/utils.hpp src/word_match.hpp src/hardware.hpp src/xbutil.hpp src/ffi.h
 CXXFLAGS += -Isrc
 
 # Host compiler global settings

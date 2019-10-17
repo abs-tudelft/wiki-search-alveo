@@ -1,5 +1,6 @@
 
 #include "alveo.hpp"
+#include "xbutil.hpp"
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -169,6 +170,12 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
     }
     if (!quiet) printf("Found %u kernel instances.\n\n", num_subdevices);
 
+    // Query the frequencies.
+    XBUtilDumpInfo info;
+    xbutil_dump(info);
+    clock0 = info.clock0;
+    clock1 = info.clock1;
+    if (!quiet) printf("Frequencies are %.0f MHz (clock 0 & bus) and %.0f MHz (clock 1).\n\n", clock0, clock1);
 }
 
 AlveoContext::~AlveoContext() {

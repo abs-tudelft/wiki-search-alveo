@@ -40,8 +40,9 @@ void HardwareWordMatchKernel::clear_chunks() {
     current_chunk = 0xFFFFFFFF;
 }
 
-HardwareWordMatchKernel::HardwareWordMatchKernel(AlveoKernelInstance &context, int num_results)
-    : context(context), num_results(num_results)
+HardwareWordMatchKernel::HardwareWordMatchKernel(
+    AlveoKernelInstance &context, float clock0, float clock1, int num_results)
+    : context(context), num_results(num_results), clock0(clock0), clock1(clock1)
 {
 
     // Detect which bank this kernel is connected to.
@@ -225,6 +226,9 @@ void HardwareWordMatchKernel::get_results(WordMatchPartialResultsContainer &resu
  */
 void HardwareWordMatchKernel::execute_chunk(unsigned int chunk, WordMatchPartialResultsContainer &results) {
     auto start = std::chrono::high_resolution_clock::now();
+    results.data_size = (unsigned long long)chunks[chunk].text_offset->get_size()
+                      + (unsigned long long)chunks[chunk].text_values->get_size();
+    results.clock_frequency = clock0;
     enqueue_for_chunk(chunk)->wait();
     get_results(results);
     auto elapsed = std::chrono::high_resolution_clock::now() - start;
@@ -242,7 +246,8 @@ HardwareWordMatch::HardwareWordMatch(const std::string &bin_prefix, const std::s
 
     // Construct HardwareWordMatchKernel objects for each subdevice.
     for (auto instance : context.instances) {
-        kernels.push_back(std::make_shared<HardwareWordMatchKernel>(*instance));
+        kernels.push_back(std::make_shared<HardwareWordMatchKernel>(
+            *instance, context.clock0, context.clock1));
     }
 
 }

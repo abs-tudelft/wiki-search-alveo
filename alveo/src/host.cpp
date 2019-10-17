@@ -71,6 +71,12 @@ int main(int argc, char **argv) {
             }
 
             // Print results.
+            for (unsigned int i = 0; i < results->num_partial_results; i++) {
+                auto p = results->partial_results[i];
+                printf("run %u took %u cycles at %.0f MHz for %llu bytes = %.3f GB/s\n",
+                    i, p->cycle_count, p->clock_frequency, p->data_size,
+                    (p->data_size / (p->cycle_count / (p->clock_frequency * 1000000.0f))) / (1024.0f * 1024.0f * 1024.0f));
+            }
             printf("\n%u pages matched & %u total matches within %.6fs\n",
                 results->num_page_matches, results->num_word_matches,
                 results->time_taken / 1000000.);
@@ -78,6 +84,10 @@ int main(int argc, char **argv) {
                 printf("Best match is \"%s\", coming in at %u matches\n",
                     results->max_page_title, results->max_word_matches);
             }
+
+            auto health = word_match_health();
+            printf("fpga_temp=%.2f, power_in=%.2f, power_vccint=%.2f\n",
+                health.fpga_temp, health.power_in, health.power_vccint);
 
         }
 

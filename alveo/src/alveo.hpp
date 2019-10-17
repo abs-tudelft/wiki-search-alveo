@@ -40,6 +40,8 @@ public:
     cl_program program;
     cl_command_queue queue;
     std::vector<std::shared_ptr<AlveoKernelInstance>> instances;
+    float clock0;
+    float clock1;
 
     AlveoContext(const AlveoContext&) = delete;
     AlveoContext(const std::string &bin_prefix, const std::string &kernel_name, bool quiet = false);

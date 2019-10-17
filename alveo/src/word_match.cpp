@@ -21,7 +21,11 @@ void WordMatchPartialResultsContainer::synchronize() {
  */
 void WordMatchResultsContainer::synchronize() {
     num_partial_results = cpp_partial_results.size();
-    partial_results = cpp_partial_results.data();
+    cpp_partial_result_ptrs.resize(num_partial_results);
+    for (unsigned int i = 0; i < num_partial_results; i++) {
+        cpp_partial_result_ptrs[i] = &(cpp_partial_results[i]);
+    }
+    partial_results = cpp_partial_result_ptrs.data();
 }
 
 /**
