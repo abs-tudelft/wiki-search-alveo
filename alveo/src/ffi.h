@@ -45,9 +45,12 @@ typedef struct {
     unsigned int min_matches;
 
     // Specifies whether the run should be done on hardware or in software, and
-    // how many threads should be used in software mode. 0 indicates hardware,
-    // 1 or more indicates software with the specified number of thread.
-    unsigned int mode;
+    // how many threads should be used in software mode. 0 indicates hardware;
+    // 1 or more indicates software with the specified number of thread; -1 or
+    // less indicates the same thing but with dynamic scheduling enabled (this
+    // limits the thread count to the CPU thread count, so -1000 should give
+    // the optimal number of threads).
+    int mode;
 
 } WordMatchRunConfig;
 

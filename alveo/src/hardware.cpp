@@ -314,19 +314,6 @@ void HardwareWordMatch::execute(
         }
     }
 
-    // Combine the results.
-    results.num_word_matches = 0;
-    results.num_page_matches = 0;
-    results.max_word_matches = 0;
-    for (unsigned int i = 0; i < num_batches; i++) {
-        results.num_word_matches += results.cpp_partial_results[i].num_word_matches;
-        results.num_page_matches += results.cpp_partial_results[i].num_page_matches;
-        if (results.cpp_partial_results[i].max_word_matches >= results.max_word_matches) {
-            results.max_word_matches = results.cpp_partial_results[i].max_word_matches;
-            results.max_page_title = results.cpp_partial_results[i].max_page_title;
-        }
-    }
-
     // Finish measuring execution time.
     auto elapsed = std::chrono::high_resolution_clock::now() - start;
     results.time_taken = std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count();

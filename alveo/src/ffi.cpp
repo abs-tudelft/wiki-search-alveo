@@ -1,9 +1,11 @@
 
 #include "ffi.h"
 #include "hardware.hpp"
+#include "software.hpp"
 #include "xbutil.hpp"
 #include <string>
 #include <memory>
+#include <omp.h>
 
 // The most recent error message.
 static std::string last_error;
@@ -14,6 +16,9 @@ static std::string current_data_prefix = "";
 
 // Hardware implementation.
 static std::shared_ptr<HardwareWordMatch> hw_impl;
+
+// Software implementation.
+static std::shared_ptr<SoftwareWordMatch> sw_impl;
 
 extern "C" {
 
@@ -45,7 +50,7 @@ int word_match_init(
             throw std::runtime_error("configuration must not be null");
         }
 
-        // Figure out if we need to load the hardware.
+        // Figure out if we need to load the hardware implementation.
         if (config->xclbin_prefix != nullptr && config->xclbin_prefix[0]) {
             std::string xclbin_prefix = std::string(config->xclbin_prefix) + "." + config->emu_mode;
             if (force_reload || xclbin_prefix != current_xclbin_prefix) {
@@ -69,11 +74,19 @@ int word_match_init(
 
         }
 
+        // Figure out if we need to load the software implementation.
+        if (config->keep_loaded && !sw_impl) {
+            sw_impl = std::make_shared<SoftwareWordMatch>();
+        } else if (!config->keep_loaded && sw_impl) {
+            sw_impl = nullptr;
+        }
+
         // Figure out if we need to reload the data.
         std::string data_prefix = std::string(config->data_prefix);
         if (data_prefix != current_data_prefix || force_reload) {
             std::vector<std::shared_ptr<WordMatch>> impls;
             if (hw_impl) impls.push_back(hw_impl);
+            if (sw_impl) impls.push_back(sw_impl);
             WordMatchDatasetLoader(data_prefix, progress, user).load(impls);
             current_data_prefix = data_prefix;
         }
@@ -107,14 +120,24 @@ const WordMatchResults *word_match_run(
         }
 
         // Select which implementation to use.
-        std::shared_ptr<HardwareWordMatch> impl;
+        std::shared_ptr<WordMatch> impl;
         if (!config->mode) {
             if (!hw_impl) {
                 throw std::runtime_error("hardware implementation is not loaded");
             }
             impl = hw_impl;
         } else {
-            throw std::runtime_error("software implementation is not loaded");
+            if (!sw_impl) {
+                throw std::runtime_error("software implementation is not loaded");
+            }
+            if (config->mode > 0) {
+                omp_set_dynamic(0);
+                omp_set_num_threads(config->mode);
+            } else {
+                omp_set_dynamic(1);
+                omp_set_num_threads(-config->mode);
+            }
+            impl = sw_impl;
         }
 
         // Construct the configuration.
@@ -150,6 +173,7 @@ WordMatchHealthInfo word_match_health() {
  */
 void word_match_release() {
     hw_impl = nullptr;
+    sw_impl = nullptr;
 }
 
 }

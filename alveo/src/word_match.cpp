@@ -8,11 +8,14 @@
  * Must be called after any of the containers are resized/reallocated.
  */
 void WordMatchPartialResultsContainer::synchronize() {
+
+    // Point the raw pointers to the appropriate STL structures.
     max_page_title = cpp_max_page_title.c_str();
     num_page_match_records = cpp_page_match_counts.size();
     page_match_counts = cpp_page_match_counts.data();
     page_match_title_offsets = cpp_page_match_title_offsets.data();
     page_match_title_values = cpp_page_match_title_values.c_str();
+
 }
 
 /**
@@ -20,12 +23,28 @@ void WordMatchPartialResultsContainer::synchronize() {
  * Must be called after any of the containers are resized/reallocated.
  */
 void WordMatchResultsContainer::synchronize() {
+
+    // Combine the partial results.
+    num_word_matches = 0;
+    num_page_matches = 0;
+    max_word_matches = 0;
+    for (auto &presults : cpp_partial_results) {
+        num_word_matches += presults.num_word_matches;
+        num_page_matches += presults.num_page_matches;
+        if (presults.max_word_matches >= max_word_matches) {
+            max_word_matches = presults.max_word_matches;
+            max_page_title = presults.max_page_title;
+        }
+    }
+
+    // Point the raw pointers to the appropriate STL structures.
     num_partial_results = cpp_partial_results.size();
     cpp_partial_result_ptrs.resize(num_partial_results);
     for (unsigned int i = 0; i < num_partial_results; i++) {
         cpp_partial_result_ptrs[i] = &(cpp_partial_results[i]);
     }
     partial_results = cpp_partial_result_ptrs.data();
+
 }
 
 /**

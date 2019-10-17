@@ -60,11 +60,16 @@ arrow_CXXFLAGS=$(shell pkg-config --cflags arrow) -D_GLIBCXX_USE_CXX11_ABI=0
 CXXFLAGS += $(arrow_CXXFLAGS)
 LDFLAGS += $(arrow_LDFLAGS)
 
-CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++14
+LDFLAGS += -lsnappy
+
+CXXFLAGS += $(opencl_CXXFLAGS) -Wall -std=c++14
 LDFLAGS += $(opencl_LDFLAGS)
 
-HOST_SRCS += src/alveo.cpp src/utils.cpp src/word_match.cpp src/hardware.cpp src/xbutil.cpp src/ffi.cpp
-HOST_HDRS += src/alveo.hpp src/utils.hpp src/word_match.hpp src/hardware.hpp src/xbutil.hpp src/ffi.h
+#CXXFLAGS += -O0 -g
+CXXFLAGS += -O3
+
+HOST_SRCS += src/alveo.cpp src/utils.cpp src/word_match.cpp src/hardware.cpp src/software.cpp src/xbutil.cpp src/ffi.cpp
+HOST_HDRS += src/alveo.hpp src/utils.hpp src/word_match.hpp src/hardware.hpp src/software.hpp src/xbutil.hpp src/ffi.h
 CXXFLAGS += -Isrc
 
 # Host compiler global settings
