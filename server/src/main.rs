@@ -1,6 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
-use warp::{self, http::Response, Filter};
+use std::{
+    ffi::{CStr, CString},
+    time::Duration,
+};
+use warp::{
+    self,
+    http::{status::StatusCode, Response},
+    Filter,
+};
 use wrapper::*;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,23 +44,68 @@ impl warp::Reply for QueryResult {
 }
 
 fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection> {
-    let result = QueryResult {
-        query,
-        stats: QueryStats {
-            total_count: 123,
-            input_size: 27_000_000_000,
-            time_taken: Duration::from_secs(1),
-        },
-        results: Some(vec![
-            (String::from("Xilinx"), 1234),
-            (String::from("FPGA"), 42),
-            (String::from("Fletcher"), 123),
-            (String::from("Alveo"), 1),
-            (String::from("VHDL"), 9001),
-        ]),
+    let pattern = CString::new(query.pattern.as_str()).unwrap();
+    let whole_words = if let Some(x) = query.whole_words {
+        if x {
+            1
+        } else {
+            0
+        }
+    } else {
+        0
     };
-    std::thread::sleep(Duration::from_secs(1));
-    Ok(result)
+    let min_matches = if let Some(x) = query.min_matches {
+        x
+    } else {
+        1u32
+    };
+
+    let mut config = WordMatchRunConfig {
+        pattern: pattern.as_ptr(),
+        whole_words,
+        min_matches,
+        mode: 0u32,
+    };
+
+    let result = unsafe { word_match_run(&mut config, None, std::ptr::null_mut()).as_ref() };
+    if result.is_none() {
+        return Err(warp::reject::custom("Null pointer"));
+    } else {
+        let result = result.unwrap();
+        Ok(QueryResult {
+            query,
+            stats: QueryStats {
+                total_count: result.num_word_matches,
+                input_size: 1,
+                time_taken: Duration::from_micros(result.time_taken.into()),
+            },
+            results: Some(vec![(
+                unsafe {
+                    CStr::from_ptr(result.max_page_title)
+                        .to_string_lossy()
+                        .to_string()
+                },
+                result.max_word_matches,
+            )]),
+        })
+    }
+    // let result = QueryResult {
+    //     query,
+    //     stats: QueryStats {
+    //         total_count: 123,
+    //         input_size: 27_000_000_000,
+    //         time_taken: Duration::from_secs(1),
+    //     },
+    //     results: Some(vec![
+    //         (String::from("Xilinx"), 1234),
+    //         (String::from("FPGA"), 42),
+    //         (String::from("Fletcher"), 123),
+    //         (String::from("Alveo"), 1),
+    //         (String::from("VHDL"), 9001),
+    //     ]),
+    // };
+    // std::thread::sleep(Duration::from_secs(1));
+    // Ok(result)
 }
 
 /// dont-ask
@@ -104,7 +156,7 @@ fn get_wiki_img(query: WikiImageParameters) -> Result<impl warp::Reply, warp::Re
     Ok(response.body(buf).unwrap())
 }
 
-fn main() {
+fn main() -> Result<(), ()> {
     // Serve client files
     // TODO(mb): serve at /static?
     let client = warp::fs::dir("../client/dist");
@@ -124,6 +176,37 @@ fn main() {
     // Construct
     let api = query.or(wiki_img).or(client);
 
+    // Host application configuration setup
+    let data_prefix = CString::new("/work/mbrobbel/wiki/enwiki-no-meta/enwiki-no-meta").unwrap();
+    let xclbin_prefix =
+        CString::new("/work/shared/fletcher-alveo/fletcher-alveo-demo-10/alveo/xclbin-12/word_match")
+            .unwrap();
+    let emu_mode = CString::new("hw").unwrap();
+    let kernel_name = CString::new("krnl_word_match_rtl").unwrap();
+
+    let mut test_config = WordMatchPlatformConfig {
+        data_prefix: data_prefix.as_ptr(),
+        xclbin_prefix: xclbin_prefix.as_ptr(),
+        emu_mode: emu_mode.as_ptr(),
+        kernel_name: kernel_name.as_ptr(),
+        keep_loaded: 1i32,
+    };
+
+    // Initialize
+    let test_fpga = unsafe { word_match_init(&mut test_config, 0i32, None, std::ptr::null_mut()) };
+    if test_fpga == 0 {
+        let error = unsafe { word_match_last_error() };
+        eprintln!("Init failed: {}", unsafe {
+            CStr::from_ptr(error).to_string_lossy()
+        });
+        unsafe { word_match_release() };
+        return Err(());
+    }
+
     // Start server
     warp::serve(api).run(([127, 0, 0, 1], 3030));
+
+    unsafe { word_match_release() };
+
+    Ok(())
 }

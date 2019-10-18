@@ -116,28 +116,29 @@
           <v-divider></v-divider>
         </v-row>
       </v-container>
+
       <v-container v-if="response">
-        <v-row v-if="result && result.results[0]">
-          <v-col cols="3">
+        <v-row v-if="response && response.results && response.results[0]">
+          <v-col cols="5">
             <v-card outlined>
               <v-img
-                class="white--text align-end"
-                :src="'wiki_img?article=' + result.results[0][0]"
+                class="align-end"
+                :src="'wiki_img?article=' + response.results[0][0]"
               >
                 <v-card-title class="headline">{{
-                  result.results[0][0]
+                  response.results[0][0]
                 }}</v-card-title>
               </v-img>
               <v-card-subtitle class="overline">TOP RESULT</v-card-subtitle>
               <v-card-actions>
-                <v-btn text color="orange darken-4">Visit</v-btn>
+                <!-- <v-btn text color="orange darken-4">{{ response.results[0][0] }}</v-btn> -->
                 <v-spacer></v-spacer>
-                <v-chip>{{ result.results[0][1] }}</v-chip>
+                <v-chip>{{ response.results[0][1] }}</v-chip>
               </v-card-actions>
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <!-- <v-row>
           <v-expansion-panels v-if="result && result.results" accordion>
             <v-expansion-panel v-for="result in result.results">
               <v-expansion-panel-header>
@@ -149,12 +150,10 @@
               <v-expansion-panel-content> </v-expansion-panel-content>
             </v-expansion-panel>
           </v-expansion-panels>
-        </v-row>
-        <v-row v-if="result">
-          <v-alert outlined color="primary" v-if="!loading && result.query">
-            <p>{{ result.query }}</p>
-            <p>{{ result.stats }}</p>
-            <p>{{ result.results }}</p>
+        </v-row> -->
+        <v-row v-if="response && response.stats">
+          <v-alert outlined color="primary" v-if="!loading && response.query">
+            <p>{{ response }}</p>
           </v-alert>
         </v-row>
         <!-- <v-list disabled
@@ -209,20 +208,6 @@ export default Vue.extend({
       },
       query: undefined,
       response: undefined,
-      /*
-      response: {
-        query: ...,
-        stats: ...,
-        results: [
-          {
-            title: "string",
-            count: int
-          }
-        ]
-      }
-      */
-      // query: "",
-      result: { results: [["Xilinx", 90000]] },
       loading: false
     };
   },
