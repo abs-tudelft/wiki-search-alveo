@@ -32,27 +32,39 @@
                       >
                       <v-row v-else no-gutters style="width: 100%">
                         <v-col
+                          v-if="configuration.whole_words"
                           align-self="center"
                           cols="4"
                           class="text--secondary"
-                          >Minimal matches</v-col
-                        >
-                        <v-col align-self="center" cols="2">
-                          <v-chip>{{
-                            configuration.min_matches
-                          }}</v-chip>
-                        </v-col>
-                        <v-col
-                          align-self="center"
-                          cols="5"
-                          class="text--secondary"
                           >Match whole words</v-col
                         >
-                        <v-col align-self="center" cols="1">
-                          <v-icon v-if="configuration.whole_words"
-                            >mdi-toggle-switch</v-icon>
-                          <v-icon v-else>mdi-toggle-switch-off</v-icon>
-                        </v-col>
+                        <v-col
+                          v-else
+                          align-self="center"
+                          cols="4"
+                          class="text--secondary"
+                          >Normal match</v-col
+                        >
+                        <v-col
+                          align-self="center"
+                          cols="4"
+                          class="text--secondary"
+                          >≥ {{configuration.min_matches}} match<span v-if="configuration.min_matches!=1">es</span> per page</v-col
+                        >
+                        <v-col
+                          v-if="configuration.software"
+                          align-self="center"
+                          cols="4"
+                          class="text--secondary"
+                          >Use {{configuration.num_threads}} CPU thread<span v-if="configuration.num_threads!=1">s</span></v-col
+                        >
+                        <v-col
+                          v-else
+                          align-self="center"
+                          cols="4"
+                          class="text--secondary"
+                          >Use Alveo</v-col
+                        >
                       </v-row>
                     </v-fade-transition>
                   </v-row>
@@ -61,6 +73,24 @@
                 <!-- Configuration modifications -->
                 <v-expansion-panel-content>
                   <v-row no-gutters align="center" justify="center">
+                    <v-col offset="1" align-self="left" cols="5">
+                      <v-row no-gutters align="left" justify="left">
+                        <v-switch
+                          v-model="configuration.whole_words"
+                          label="Whole words"
+                          inset
+                          color="primary"
+                        ></v-switch>
+                      </v-row>
+                      <v-row no-gutters align="left" justify="left">
+                        <v-switch
+                          v-model="configuration.software"
+                          label="Run on CPU"
+                          inset
+                          color="primary"
+                        ></v-switch>
+                      </v-row>
+                    </v-col>
                     <v-col align-self="center" cols="6">
                       <v-row
                         no-gutters
@@ -68,7 +98,7 @@
                         justify="center"
                         class="text--secondary"
                       >
-                        Minimal matches
+                        Minimum number of matches: {{configuration.min_matches}}
                       </v-row>
                       <v-row no-gutters
                       align="center"
@@ -79,14 +109,25 @@
                           thumb-label
                         ></v-slider>
                       </v-row>
-                    </v-col>
-                    <v-col offset="1" align-self="center" cols="5">
-                      <v-switch
-                        v-model="configuration.whole_words"
-                        label="Whole words"
-                        inset
-                        color="primary"
-                      ></v-switch>
+                      <v-row
+                        no-gutters
+                        align="center"
+                        justify="center"
+                        class="text--secondary"
+                      >
+                        Number of CPU threads: {{configuration.num_threads}}
+                      </v-row>
+                      <v-row no-gutters
+                      align="center"
+                        justify="center">
+                        <v-slider
+                          min="1"
+                          max="40"
+                          :disabled="!configuration.software"
+                          v-model="configuration.num_threads"
+                          thumb-label
+                        ></v-slider>
+                      </v-row>
                     </v-col>
                   </v-row>
                 </v-expansion-panel-content>
@@ -204,7 +245,9 @@ export default Vue.extend({
       configuration: {
         open: false,
         whole_words: false,
-        min_matches: 1
+        min_matches: 1,
+        software: false,
+        num_threads: 40
       },
       query: undefined,
       response: undefined,
@@ -225,11 +268,12 @@ export default Vue.extend({
       if (!this.query || this.query === "") {
         return;
       }
+      var mode = this.configuration.software ? this.configuration.num_threads : 0;
       this.loading = true;
       this.response = undefined;
       this.configuration.open = false;
       fetch(
-        `query?pattern=${this.query}&whole_words=${this.configuration.whole_words}&min_matches=${this.configuration.min_matches}`
+        `query?pattern=${this.query}&whole_words=${this.configuration.whole_words}&min_matches=${this.configuration.min_matches}&mode=${mode}`
       ).then(res => res.json()).then(res => {
         if (this.loading) {
           this.loading = false;

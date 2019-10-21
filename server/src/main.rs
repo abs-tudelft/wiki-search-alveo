@@ -15,6 +15,7 @@ struct QueryParameters {
     pattern: String,
     whole_words: Option<bool>,
     min_matches: Option<u32>,
+    mode: Option<i32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -59,12 +60,17 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
     } else {
         1u32
     };
+    let mode = if let Some(x) = query.mode {
+        x
+    } else {
+        0i32
+    };
 
     let mut config = WordMatchRunConfig {
         pattern: pattern.as_ptr(),
         whole_words,
         min_matches,
-        mode: 0i32,
+        mode,
     };
 
     let result = unsafe { word_match_run(&mut config, Some(print_progress), std::ptr::null_mut()).as_ref() };
