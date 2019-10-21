@@ -2,10 +2,12 @@ use serde::{Deserialize, Serialize};
 use std::{
     ffi::{CStr, CString},
     time::Duration,
+    collections::HashMap,
+    slice::from_raw_parts,
 };
 use warp::{
     self,
-    http::{status::StatusCode, Response},
+    http::Response,
     Filter,
 };
 use wrapper::*;
@@ -78,40 +80,82 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
         return Err(warp::reject::custom("Null pointer"));
     } else {
         let result = result.unwrap();
+
+        // Whether all matching results were returned, or there were
+        // more matches than result slots in at least one of the chunks.
+        let mut all_known = true;
+
+        // Approximate number of compressed bytes processed in total.
+        let mut input_size = 0u64;
+
+        let mut results = HashMap::new();
+        for partial in unsafe {from_raw_parts(result.partial_results, result.num_partial_results as usize)} {
+            let partial = unsafe {**partial};
+
+            // Always add the page with the most matches.
+            if partial.max_word_matches >= min_matches {
+                results.insert(
+                    unsafe {
+                        CStr::from_ptr(partial.max_page_title)
+                            .to_string_lossy()
+                            .to_string()
+                    },
+                    partial.max_word_matches
+                );
+            }
+
+            // Add the N first matches found for this chunk.
+            let num_records = partial.num_page_match_records as usize;
+            let title_values = unsafe {
+                CStr::from_ptr(partial.page_match_title_values)
+                    .to_string_lossy()
+                    .to_string()
+            };
+            let title_offsets = unsafe {
+                from_raw_parts(
+                    partial.page_match_title_offsets,
+                    num_records + 1
+                )
+            };
+            let match_counts = unsafe {
+                from_raw_parts(
+                    partial.page_match_counts,
+                    num_records
+                )
+            };
+            for i in 0..num_records as usize {
+                let start = title_offsets[i] as usize;
+                let stop = title_offsets[i + 1] as usize;
+                results.insert(
+                    title_values[start..stop].to_string(),
+                    match_counts[i]
+                );
+            }
+
+            // Check if there were more matches in this chunk than there was room for.
+            if partial.num_page_match_records < partial.num_page_matches {
+                all_known = false;
+            }
+
+            // Accumulate input size.
+            input_size += partial.data_size as u64;
+
+        }
+
+        // Sort the results.
+        let mut results: Vec<(String, u32)> = results.into_iter().collect();
+        results.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+
         Ok(QueryResult {
             query,
             stats: QueryStats {
                 total_count: result.num_word_matches,
-                input_size: 1,
+                input_size,
                 time_taken: Duration::from_micros(result.time_taken.into()),
             },
-            results: Some(vec![(
-                unsafe {
-                    CStr::from_ptr(result.max_page_title)
-                        .to_string_lossy()
-                        .to_string()
-                },
-                result.max_word_matches,
-            )]),
+            results: Some(results),
         })
     }
-    // let result = QueryResult {
-    //     query,
-    //     stats: QueryStats {
-    //         total_count: 123,
-    //         input_size: 27_000_000_000,
-    //         time_taken: Duration::from_secs(1),
-    //     },
-    //     results: Some(vec![
-    //         (String::from("Xilinx"), 1234),
-    //         (String::from("FPGA"), 42),
-    //         (String::from("Fletcher"), 123),
-    //         (String::from("Alveo"), 1),
-    //         (String::from("VHDL"), 9001),
-    //     ]),
-    // };
-    // std::thread::sleep(Duration::from_secs(1));
-    // Ok(result)
 }
 
 /// dont-ask

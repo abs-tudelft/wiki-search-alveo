@@ -48,7 +48,7 @@ void SoftwareWordMatch::execute(const WordMatchConfig &config,
         presults.cpp_page_match_counts.clear();
         presults.cpp_page_match_title_offsets.clear();
         presults.cpp_page_match_title_values.clear();
-        presults.cpp_page_match_title_values.push_back(0);
+        presults.cpp_page_match_title_offsets.push_back(0);
         presults.max_word_matches = 0;
         presults.cpp_max_page_title.clear();
         presults.cycle_count = 0;
@@ -145,7 +145,7 @@ void SoftwareWordMatch::execute(const WordMatchConfig &config,
                     presults.num_page_matches++;
                     if (presults.cpp_page_match_counts.size() < 32) {
                         presults.cpp_page_match_counts.push_back(num_matches);
-                        presults.cpp_page_match_title_values += titles->GetString(max_page_idx);
+                        presults.cpp_page_match_title_values += titles->GetString(ii);
                         presults.cpp_page_match_title_offsets.push_back(
                             presults.cpp_page_match_title_values.size());
                     }
