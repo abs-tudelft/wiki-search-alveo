@@ -5,5 +5,5 @@ To build on qce-alveo01.ewi.tudelft.nl:
  - `scl enable devtoolset-7 bash`
  - `export LD_LIBRARY_PATH=/usr/lib64/clang-private:<WORKDIR>/alveo`
  - in `alveo`: `make host` (and maybe run `./host` to verify that it works)
- - in `client`: <<insert dark front-end developer incantations here>> (or copy from `/work/mbrobbel/fletcher-alveo-demo/client/dist`)
+ - on a machine with `npm` and the possibility to install stuff, in `client`: `npm install` followed by `npm run build`
  - in `server`: `cargo build`, then `cargo run` to start serving on port 3030
