@@ -64,10 +64,10 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
         pattern: pattern.as_ptr(),
         whole_words,
         min_matches,
-        mode: 0u32,
+        mode: 0i32,
     };
 
-    let result = unsafe { word_match_run(&mut config, None, std::ptr::null_mut()).as_ref() };
+    let result = unsafe { word_match_run(&mut config, Some(print_progress), std::ptr::null_mut()).as_ref() };
     if result.is_none() {
         return Err(warp::reject::custom("Null pointer"));
     } else {
@@ -156,6 +156,15 @@ fn get_wiki_img(query: WikiImageParameters) -> Result<impl warp::Reply, warp::Re
     Ok(response.body(buf).unwrap())
 }
 
+extern "C" fn print_progress(
+    _: *mut ::std::os::raw::c_void,
+    status: *const ::std::os::raw::c_char,
+) {
+    println!("{}", unsafe {
+        CStr::from_ptr(status).to_string_lossy()
+    });
+}
+
 fn main() -> Result<(), ()> {
     // Serve client files
     // TODO(mb): serve at /static?
@@ -179,7 +188,7 @@ fn main() -> Result<(), ()> {
     // Host application configuration setup
     let data_prefix = CString::new("/work/mbrobbel/wiki/enwiki-no-meta/enwiki-no-meta").unwrap();
     let xclbin_prefix =
-        CString::new("/work/shared/fletcher-alveo/fletcher-alveo-demo-10/alveo/xclbin-12/word_match")
+        CString::new("/work/shared/fletcher-alveo/fletcher-alveo-demo-10/alveo/xclbin/word_match")
             .unwrap();
     let emu_mode = CString::new("hw").unwrap();
     let kernel_name = CString::new("krnl_word_match_rtl").unwrap();
@@ -193,7 +202,7 @@ fn main() -> Result<(), ()> {
     };
 
     // Initialize
-    let test_fpga = unsafe { word_match_init(&mut test_config, 0i32, None, std::ptr::null_mut()) };
+    let test_fpga = unsafe { word_match_init(&mut test_config, 0i32, Some(print_progress), std::ptr::null_mut()) };
     if test_fpga == 0 {
         let error = unsafe { word_match_last_error() };
         eprintln!("Init failed: {}", unsafe {
@@ -204,8 +213,11 @@ fn main() -> Result<(), ()> {
     }
 
     // Start server
-    warp::serve(api).run(([127, 0, 0, 1], 3030));
+    let port = 3030;
+    println!("Starting server on port {}", port);
+    warp::serve(api).run(([127, 0, 0, 1], port));
 
+    println!("Cleaning up");
     unsafe { word_match_release() };
 
     Ok(())

@@ -30,7 +30,11 @@ BUILD_DIR := ./_x.$(TARGET).$(DSA)
 
 BUILD_DIR_word_match = $(BUILD_DIR)/word_match
 
-CXX := $(XILINX_SDX)/bin/xcpp
+# To make sure that the Rust-based server and this library are linked against
+# the same runtime, we use the system g++ compiler. This doesn't seem to break
+# anything here.
+CXX := g++
+#CXX := $(XILINX_SDX)/bin/7
 XOCC := $(XILINX_SDX)/bin/xocc
 
 # Definition of include file locations
