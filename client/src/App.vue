@@ -101,7 +101,7 @@
                         Minimum number of matches: {{configuration.min_matches}}
                       </v-row>
                       <v-row no-gutters
-                      align="center"
+                        align="center"
                         justify="center">
                         <v-slider
                           min="1"
@@ -158,27 +158,152 @@
         </v-row>
       </v-container>
 
+      <v-container v-if="!response">
+        <v-row justify="center">
+          <v-col cols="9">
+            <p style="font-size: 1.2em; text-align: justify; text-align-last: center">
+              Type a query above to search a Wikipedia database dump for a word or
+              part of a word,<br/><span class="font-weight-bold">without an index</span>.
+            </p>
+            <p style="text-align: justify; text-align-last: center">
+              The database dump was pre-downloaded and transformed into
+              <span class="font-weight-bold">Apache Arrow</span> IPC format using
+              <span class="font-weight-bold">Apache Spark</span>. To make things a bit
+              more interesting, the article text is compressed with
+              <span class="font-weight-bold">Google Snappy</span> - the default
+              compression format of <span class="font-weight-bold">Apache Parquet</span>.
+              The resulting dataset is about 22GB in size for the English Wikipedia
+              without meta pages. The dataset is cached onto the local DDR banks of a
+              <span class="font-weight-bold">Xilinx Alveo U200</span> FPGA accelerator
+              card. The FPGA design consists of 45 RTL Snappy decompression engines
+              and pattern matchers, fed with streaming Arrow data through a
+              <span class="font-weight-bold">Fletcher</span> interface, and integrated
+              with <span class="font-weight-bold">SDAccel</span>. For comparison, the
+              algorithm can also be run on CPU, using up to forty Intel Xeon Silver
+              4114 processor threads.
+            </p>
+          </v-col>
+        </v-row>
+      </v-container>
+
       <v-container v-if="response">
-        <v-row v-if="response && response.results && response.results[0]">
-          <v-col cols="5">
+        <v-row justify="center">
+          <v-col cols="8">
+            <p style="font-size: 1.2em; text-align: justify; text-align-last: center">
+              <span class="font-weight-bold">{{response.stats.num_word_matches}}</span>
+              word<span v-if="response.stats.num_word_matches!=1">s</span>
+              matched across
+              <span class="font-weight-bold">{{response.stats.num_page_matches}}</span>
+              page<span v-if="response.stats.num_page_matches!=1">s</span>,<br/>
+              of which
+              <span v-if="response.stats.num_result_records!=response.stats.num_page_matches">
+                only <span class="font-weight-bold">{{response.stats.num_result_records}}</span>
+                page match<span v-if="response.stats.num_result_records!=1">es were</span>
+                <span v-else>was</span>
+              </span>
+              <span v-else>
+                all page matches were
+              </span>
+              recorded and sorted.
+            </p>
+            <p style="text-align: justify; text-align-last: center">
+              The query took
+              <span class="font-weight-bold">{{response.stats.time_taken_ms}} ms</span>,
+              making the equivalent compressed article text bandwidth approximately
+              <span class="font-weight-bold">{{response.stats.bandwidth}}</span>.
+            </p>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-divider></v-divider>
+        </v-row>
+        <v-row v-if="response && response.top_result" justify="center">
+          <v-col cols="6">
             <v-card outlined>
               <v-img
                 class="align-end"
-                :src="'wiki_img?article=' + response.results[0][0]"
+                :src="'wiki_img?article=' + response.top_result[0]"
+                height="400px"
+                gradient="to bottom, rgba(0,0,0,.05), rgba(0,0,0,.3)"
               >
-                <v-card-title class="headline">{{
-                  response.results[0][0]
+                <v-card-title class="headline white--text">{{
+                  response.top_result[0]
                 }}</v-card-title>
               </v-img>
               <v-card-subtitle class="overline">TOP RESULT</v-card-subtitle>
               <v-card-actions>
-                <!-- <v-btn text color="orange darken-4">{{ response.results[0][0] }}</v-btn> -->
+                <!-- <v-btn text color="orange darken-4">{{ response.top_result[0] }}</v-btn> -->
                 <v-spacer></v-spacer>
-                <v-chip>{{ response.results[0][1] }}</v-chip>
+                <v-chip>{{ response.top_result[1] }}</v-chip>
               </v-card-actions>
             </v-card>
           </v-col>
         </v-row>
+        <v-row v-else justify="center">
+          <v-col cols="6" class="headline" justify="center">
+            No results found!
+          </v-col>
+        </v-row>
+        <v-row justify="center">
+          <v-col cols="9">
+            <v-row v-if="response.top_ten_results" justify="center" dense>
+              <v-col cols="4" v-for="(result, idx) in response.top_ten_results">
+                <v-card outlined>
+                  <v-img
+                    class="align-end"
+                    :src="'wiki_img?article=' + result[0]"
+                    height="200px"
+                    gradient="to bottom, rgba(0,0,0,.05), rgba(0,0,0,.3)"
+                  >
+                    <v-card-title class="headline white--text">{{
+                      result[0]
+                    }}</v-card-title>
+                  </v-img>
+                  <v-card-subtitle class="overline">RESULT #{{idx + 2}}</v-card-subtitle>
+                  <v-card-actions>
+                    <!-- <v-btn text color="orange darken-4">{{ result[0] }}</v-btn> -->
+                    <v-spacer></v-spacer>
+                    <v-chip>{{ result[1] }}</v-chip>
+                  </v-card-actions>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+        <v-row v-if="response.other_results">
+          <v-divider></v-divider>
+        </v-row>
+        <v-row v-if="response.other_results" justify="center">
+          <v-col cols="5" v-if="response.other_results && response.top_ten_results.length == 0">
+            <p style="text-align: justify; text-align-last: center">
+              Note: kernel result slots overflowed. The matches shown here are a random
+              sample of the pages that matched; there may be pages with more matches.
+            </p>
+          </v-col>
+        </v-row>
+        <v-row v-if="response.other_results" justify="center">
+          <v-col cols="4">
+            <v-list disabled dense>
+              <v-list-item v-for="(result, idx) in response.other_results">
+                <v-list-item-content>
+                  <v-list-item-title>
+                    <span
+                      v-if="response.top_ten_results.length != 0"
+                      class="text--secondary"
+                    >
+                      #{{response.top_ten_results.length + idx + 2}}
+                    </span>
+                    {{result[0]}}
+                  </v-list-item-title>
+                </v-list-item-content>
+                <v-list-item-avatar>
+                  <v-chip>{{result[1]}}</v-chip>
+                </v-list-item-avatar>
+              </v-list-item>
+            </v-list>
+          </v-col>
+        </v-row>
+
         <!-- <v-row>
           <v-expansion-panels v-if="result && result.results" accordion>
             <v-expansion-panel v-for="result in result.results">
@@ -197,18 +322,6 @@
             <p>{{ response }}</p>
           </v-alert>
         </v-row>
-        <!-- <v-list disabled
-          v-if="result"
-          v-for="result in result.results"
-        >
-          <v-list-item>
-            <v-badge>
-              {{ result[0] }}
-              <template v-slot:badge>{{ result[1] }}</template>
-            </v-badge>
-          </v-list-item>
-        </v-list>
- -->
       </v-container>
     </v-content>
 

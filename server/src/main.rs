@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::{CStr, CString},
-    time::Duration,
     collections::HashMap,
     slice::from_raw_parts,
 };
@@ -22,17 +21,21 @@ struct QueryParameters {
 
 #[derive(Debug, Serialize)]
 struct QueryStats {
-    total_count: u32,
-    /// Input data size in bytes
+    num_word_matches: u32,
+    num_page_matches: u32,
+    num_result_records: u32,
     input_size: u64,
-    time_taken: Duration,
+    time_taken_ms: u32,
+    bandwidth: String,
 }
 
 #[derive(Debug, Serialize)]
 struct QueryResult {
     query: QueryParameters,
     stats: QueryStats,
-    results: Option<Vec<(String, u32)>>,
+    top_result: Option<(String, u32)>,
+    top_ten_results: Vec<(String, u32)>,
+    other_results: Vec<(String, u32)>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -144,16 +147,39 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
 
         // Sort the results.
         let mut results: Vec<(String, u32)> = results.into_iter().collect();
-        results.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap());
+        results.sort_by(|(at, ac), (bt, bc)| (bc, at).partial_cmp(&(ac, bt)).unwrap());
+        let num_result_records = results.len() as u32;
+
+        // Separate into the top result, the subsequent 9 in the top 10, and
+        // the remaining results for a nice layout in the web UI. It's easier
+        // to do here than in TypeScript.
+        let mut results = results.drain(..);
+        let top_result = results.next();
+        let mut top_ten_results = Vec::new();
+        if all_known {
+            for _ in 1..10 {
+                if let Some(record) = results.next() {
+                    top_ten_results.push(record);
+                } else {
+                    break;
+                }
+            }
+        }
+        let other_results = results.take(90).collect();
 
         Ok(QueryResult {
             query,
             stats: QueryStats {
-                total_count: result.num_word_matches,
+                num_word_matches: result.num_word_matches,
+                num_page_matches: result.num_page_matches,
+                num_result_records,
                 input_size,
-                time_taken: Duration::from_micros(result.time_taken.into()),
+                time_taken_ms: result.time_taken / 1000,
+                bandwidth: format!("{:.2} GB/s", ((input_size as f32) / (result.time_taken as f32)) / 1000f32),
             },
-            results: Some(results),
+            top_result,
+            top_ten_results,
+            other_results,
         })
     }
 }
