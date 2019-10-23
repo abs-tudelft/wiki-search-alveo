@@ -23,44 +23,39 @@
           <!-- configuration panel -->
           <v-col cols="6">
             <v-expansion-panels v-model="configuration.open">
-              <v-expansion-panel>
+              <v-expansion-panel :disabled="loading">
                 <v-expansion-panel-header v-slot="{ open }">
                   <v-row no-gutters>
                     <v-fade-transition leave-absolute>
                       <span v-if="open"
                         ><v-icon>mdi-tune</v-icon> Configuration</span
                       >
-                      <v-row v-else no-gutters style="width: 100%">
+                      <v-row v-else no-gutters style="width: 100%" align="center">
                         <v-col
                           v-if="configuration.whole_words"
-                          align-self="center"
                           cols="4"
                           class="text--secondary"
                           >Match whole words</v-col
                         >
                         <v-col
                           v-else
-                          align-self="center"
                           cols="4"
                           class="text--secondary"
                           >Normal match</v-col
                         >
                         <v-col
-                          align-self="center"
                           cols="4"
                           class="text--secondary"
                           >≥ {{configuration.min_matches}} match<span v-if="configuration.min_matches!=1">es</span> per page</v-col
                         >
                         <v-col
                           v-if="configuration.software"
-                          align-self="center"
                           cols="4"
                           class="text--secondary"
                           >Use {{configuration.num_threads}} CPU thread<span v-if="configuration.num_threads!=1">s</span></v-col
                         >
                         <v-col
                           v-else
-                          align-self="center"
                           cols="4"
                           class="text--secondary"
                           >Use Alveo</v-col
@@ -73,23 +68,13 @@
                 <!-- Configuration modifications -->
                 <v-expansion-panel-content>
                   <v-row no-gutters align="center" justify="center">
-                    <v-col offset="1" align-self="left" cols="5">
-                      <v-row no-gutters align="left" justify="left">
-                        <v-switch
-                          v-model="configuration.whole_words"
-                          label="Whole words"
-                          inset
-                          color="primary"
-                        ></v-switch>
-                      </v-row>
-                      <v-row no-gutters align="left" justify="left">
-                        <v-switch
-                          v-model="configuration.software"
-                          label="Run on CPU"
-                          inset
-                          color="primary"
-                        ></v-switch>
-                      </v-row>
+                    <v-col offset="1" cols="5">
+                      <v-switch
+                        v-model="configuration.whole_words"
+                        label="Whole words"
+                        inset
+                        color="primary"
+                      ></v-switch>
                     </v-col>
                     <v-col align-self="center" cols="6">
                       <v-row
@@ -102,13 +87,24 @@
                       </v-row>
                       <v-row no-gutters
                         align="center"
-                        justify="center">
+                        justify="center"
+                      >
                         <v-slider
                           min="1"
                           v-model="configuration.min_matches"
                           thumb-label
                         ></v-slider>
                       </v-row>
+                    </v-col>
+                    <v-col offset="1" cols="5">
+                      <v-switch
+                        v-model="configuration.software"
+                        label="Run on CPU"
+                        inset
+                        color="primary"
+                      ></v-switch>
+                    </v-col>
+                    <v-col align-self="center" cols="6">
                       <v-row
                         no-gutters
                         align="center"
@@ -118,8 +114,9 @@
                         Number of CPU threads: {{configuration.num_threads}}
                       </v-row>
                       <v-row no-gutters
-                      align="center"
-                        justify="center">
+                        align="center"
+                        justify="center"
+                      >
                         <v-slider
                           min="1"
                           max="40"
@@ -134,23 +131,25 @@
               </v-expansion-panel>
             </v-expansion-panels>
           </v-col>
-          <v-col self-align="center" cols="3">
-            <v-btn
-              color="warning"
-              @click="clear"
-              outlined
-              x-large
-              :disabled="query === undefined && response === undefined"
-              >Clear</v-btn
-            >
-            <v-btn
-              color="success"
-              @click="getQuery"
-              outlined
-              x-large
-              :disabled="query === undefined || loading === true"
-              >Search</v-btn
-            >
+          <v-col justify="end" cols="3">
+            <div style="text-align: end; width: 100%">
+              <v-btn
+                color="warning"
+                @click="clear"
+                outlined
+                x-large
+                :disabled="query === undefined && response === undefined"
+                >Clear</v-btn
+              >
+              <v-btn
+                color="success"
+                @click="getQuery"
+                outlined
+                x-large
+                :disabled="query === undefined || loading === true"
+                >Search</v-btn
+              >
+            </div>
           </v-col>
         </v-row>
         <v-row>
@@ -225,7 +224,7 @@
               <v-col cols=2>
               </v-col>
               <v-col cols=6 style="text-align: center">
-                <span v-if="!loading">Done! Alveo speedup: {{Number((sw_time / hw_time).toFixed(2))}}x</span>
+                <span v-if="!loading">Done! Alveo speedup: {{(sw_time / hw_time).toFixed(2)}}x</span>
                 <span v-if="loading && configuration.software">Running on CPU...</span>
                 <span v-if="loading && !configuration.software">Running on Alveo...</span>
               </v-col>
@@ -233,7 +232,7 @@
               </v-col>
             </v-row>
           </v-col>
-          <v-col cols="4">
+          <v-col cols="5">
             <p style="font-size: 1.2em; text-align: justify; text-align-last: right" v-if="response">
               <span class="font-weight-bold">{{response.stats.num_word_matches}}</span>
               word<span v-if="response.stats.num_word_matches!=1">s</span>
@@ -380,26 +379,73 @@
           </v-alert>
         </v-row>-->
       </v-container>
+
+      <div style="height: 200px">
     </v-content>
 
-    <v-footer class="grey lighten-3">
+    <v-footer class="grey lighten-3" style="position: fixed; left: 0px; right: 0px; bottom: 0px">
       <v-container>
-        <v-row align="center" justify="center">
-          <v-col align="center" justify="center" cols="2">
-            <img src="../assets/xilinx-logo.svg" height="100px" />
+        <v-row align="end" justify="center" no-gutters>
+          <v-col self-align="center" align="start" cols="5">
+            <div v-if="server_status">
+              <v-row align="center" no-gutters>
+                <v-col cols=2 no-gutters>
+                  Server status
+                </v-col>
+                <v-col cols=10 no-gutters>
+                  {{server_status.status}}
+                </v-col>
+              </v-row>
+              <v-row align="center" no-gutters>
+                <v-col cols=2 no-gutters>
+                  Alveo total
+                </v-col>
+                <v-col cols=6 no-gutters>
+                  <v-progress-linear
+                    :value="server_status.power_in * 1.5"
+                    color="light-blue"
+                    height="7px"
+                    style="transition-duration: 0.5s"
+                  />
+                </v-col>
+                <v-col offset=1 cols=3 no-gutters>
+                  {{(server_status.power_in).toFixed(1)}} W
+                </v-col>
+              </v-row>
+              <v-row align="center" no-gutters>
+                <v-col cols=2 no-gutters>
+                  Alveo VCCint
+                </v-col>
+                <v-col cols=6 no-gutters>
+                  <v-progress-linear
+                    :value="server_status.power_vccint * 1.5"
+                    color="light-blue"
+                    height="7px"
+                    style="transition-duration: 0.5s"
+                  />
+                </v-col>
+                <v-col offset=1 cols=3 no-gutters>
+                  {{(server_status.power_vccint).toFixed(1)}} W
+                </v-col>
+              </v-row>
+            </div>
           </v-col>
-          <v-col align="center" justify="center" cols="2">
+          <v-col align="center" justify="center" cols="1">
+            <img src="../assets/xilinx-logo.svg" height="40px" />
+          </v-col>
+          <v-col align="center" justify="center" cols="1">
             <img
               src="https://repository-images.githubusercontent.com/120948886/c0dcc400-80aa-11e9-8a51-c7ff5364fe0a"
-              height="70px"
+              height="60px"
             />
           </v-col>
-          <v-col align="center" justify="center" cols="2">
+          <v-col align="center" justify="center" cols="1">
             <img src="../assets/tudelft-logo.svg" height="50px" />
           </v-col>
+          <!-- not sure about the license for this one since we're not in any way affiliated
           <v-col align="center" justify="center" cols="2">
             <img src="../assets/wikipedia-logo.svg" height="50px" />
-          </v-col>
+          </v-col>-->
         </v-row>
       </v-container>
     </v-footer>
@@ -424,8 +470,12 @@ export default Vue.extend({
       loading: false,
       timer: undefined,
       sw_time: 0,
-      hw_time: 0
+      hw_time: 0,
+      server_status: undefined
     };
+  },
+  mounted: function() {
+    this.update_status();
   },
   methods: {
     clear: function() {
@@ -480,6 +530,12 @@ export default Vue.extend({
 //             this.configuration.software = false;
 //           }
         }
+      })
+    },
+    update_status: function() {
+      fetch('status').then(res => res.json()).then(res => {
+        this.server_status = res;
+        setTimeout(this.update_status, 300);
       })
     }
   }

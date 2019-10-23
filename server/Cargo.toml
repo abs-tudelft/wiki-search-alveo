@@ -14,3 +14,4 @@ bincode = "1.2"
 reqwest = "0.9"
 wrapper = { path = "../wrapper" }
 rust-crypto = "0.2"
+lazy_static = "1.4"

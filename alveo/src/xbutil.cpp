@@ -101,6 +101,7 @@ static void get_paths(const std::string *&xmc_path_out, const std::string *&icap
     }
     icap_path = paths.front();
 
+    use_xbutil = false;
     xmc_path_out = &xmc_path;
     icap_path_out = &icap_path;
 }

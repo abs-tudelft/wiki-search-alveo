@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::{CStr, CString},
@@ -6,6 +9,8 @@ use std::{
     path::Path,
     fs::File,
     io::{Read, Write},
+    sync::Mutex,
+    ops::{DerefMut, Deref},
 };
 use warp::{
     self,
@@ -55,6 +60,12 @@ struct QueryResult {
     other_results: Vec<(String, u32)>,
 }
 
+impl warp::Reply for QueryResult {
+    fn into_response(self) -> warp::reply::Response {
+        Response::new(serde_json::to_string(&self).unwrap().into())
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct WikiImageParameters {
     article: String,
@@ -67,13 +78,26 @@ struct WikiImageCacheRecord {
     headers: Vec<(String, String)>,
 }
 
-impl warp::Reply for QueryResult {
+#[derive(Debug, Serialize)]
+struct ServerStatus {
+    status: String,
+    fpga_temp: f32,
+    power_in: f32,
+    power_vccint: f32,
+}
+
+impl warp::Reply for ServerStatus {
     fn into_response(self) -> warp::reply::Response {
         Response::new(serde_json::to_string(&self).unwrap().into())
     }
 }
 
+lazy_static! {
+    static ref FFI_STATUS: Mutex<String> = Mutex::new("unknown".to_string());
+}
+
 fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection> {
+    println!("-> query");
 
     // Complete query by substituting default values.
     let query = CompletedQueryParameters {
@@ -99,10 +123,10 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
     };
 
     // Run the kernel.
-    // TODO: lock this!
-    let result = unsafe { word_match_run(&mut config, Some(print_progress), std::ptr::null_mut()).as_ref() };
-    if result.is_none() {
-        return Err(warp::reject::custom(get_last_error()));
+    let result = unsafe { word_match_run(&mut config, Some(ffi_update_status), std::ptr::null_mut()).as_ref() };
+    update_status("Ready");
+    let retval = if result.is_none() {
+        Err(warp::reject::custom(get_last_error()))
     } else {
         let result = result.unwrap();
 
@@ -204,7 +228,9 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
             top_ten_results,
             other_results,
         })
-    }
+    };
+    println!("<- query");
+    retval
 }
 
 /// dont-ask
@@ -266,6 +292,7 @@ fn fetch_wiki_img(query: WikiImageParameters) -> Result<WikiImageCacheRecord, wa
 }
 
 fn get_wiki_img(query: WikiImageParameters) -> Result<impl warp::Reply, warp::Rejection> {
+    println!("-> wiki_img");
 
     // Get the filename for the cache.
     let mut hasher = Sha1::new();
@@ -305,16 +332,35 @@ fn get_wiki_img(query: WikiImageParameters) -> Result<impl warp::Reply, warp::Re
     for (key, value) in record.headers {
         response.header(&key, &value);
     }
+    println!("<- wiki_img");
     Ok(response.body(record.data).unwrap())
 }
 
-extern "C" fn print_progress(
+fn get_status() -> Result<impl warp::Reply, warp::Rejection> {
+    println!("-> status");
+    let health = unsafe { word_match_health() };
+    let static_status = FFI_STATUS.lock().unwrap();
+    let retval = Ok(ServerStatus {
+        status: static_status.deref().to_string(),
+        fpga_temp: health.fpga_temp,
+        power_in: health.power_in,
+        power_vccint: health.power_vccint,
+    });
+    println!("<- status");
+    retval
+}
+
+fn update_status(status: &str) {
+    println!("{}", status);
+    let mut static_status = FFI_STATUS.lock().unwrap();
+    static_status.deref_mut().replace_range(.., &status);
+}
+
+extern "C" fn ffi_update_status(
     _: *mut ::std::os::raw::c_void,
     status: *const ::std::os::raw::c_char,
 ) {
-    println!("{}", unsafe {
-        CStr::from_ptr(status).to_string_lossy()
-    });
+    update_status(&unsafe { CStr::from_ptr(status).to_string_lossy() });
 }
 
 fn get_last_error() -> String {
@@ -324,6 +370,7 @@ fn get_last_error() -> String {
 }
 
 fn main() -> Result<(), ()> {
+
     // Serve client files
     // TODO(mb): serve at /static?
     let client = warp::fs::dir("../client/dist");
@@ -340,8 +387,13 @@ fn main() -> Result<(), ()> {
         .and(warp::query::<WikiImageParameters>())
         .and_then(get_wiki_img);
 
+    // Status query endpoint
+    let status = warp::get2()
+        .and(warp::path("status"))
+        .and_then(get_status);
+
     // Construct
-    let api = query.or(wiki_img).or(client);
+    let api = query.or(wiki_img).or(client).or(status);
 
     // Host application configuration setup
     let data_prefix = CString::new("/work/mbrobbel/wiki/enwiki-no-meta/enwiki-no-meta").unwrap();
@@ -362,12 +414,13 @@ fn main() -> Result<(), ()> {
     };
 
     // Initialize
-    let test_fpga = unsafe { word_match_init(&mut test_config, 0i32, Some(print_progress), std::ptr::null_mut()) };
+    let test_fpga = unsafe { word_match_init(&mut test_config, 0i32, Some(ffi_update_status), std::ptr::null_mut()) };
     if test_fpga == 0 {
         eprintln!("Init failed: {}", get_last_error());
         unsafe { word_match_release() };
         return Err(());
     }
+    update_status("Ready");
 
     // Start server
     let port = 3030;
