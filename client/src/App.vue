@@ -274,9 +274,15 @@
                 height="400px"
                 gradient="to bottom, rgba(0,0,0,.05), rgba(0,0,0,.3)"
               >
-                <v-card-title class="headline white--text">{{
-                  response.top_result[0]
-                }}</v-card-title>
+                <v-card-title class="headline white--text">
+                  <a
+                    :href="'https://' + response.query.wiki + '.wikipedia.org/wiki/' + response.top_result[0]"
+                    target="_blank"
+                    style="color: white"
+                  >
+                    {{response.top_result[0]}}
+                  </a>
+                </v-card-title>
               </v-img>
               <v-card-subtitle class="overline">TOP RESULT</v-card-subtitle>
               <v-card-actions>
@@ -298,9 +304,15 @@
                     height="200px"
                     gradient="to bottom, rgba(0,0,0,.05), rgba(0,0,0,.3)"
                   >
-                    <v-card-title class="headline white--text">{{
-                      result[0]
-                    }}</v-card-title>
+                    <v-card-title class="headline white--text">
+                      <a
+                        :href="'https://' + response.query.wiki + '.wikipedia.org/wiki/' + result[0]"
+                        target="_blank"
+                        style="color: white"
+                      >
+                        {{result[0]}}
+                      </a>
+                    </v-card-title>
                   </v-img>
                   <v-card-subtitle class="overline">RESULT #{{idx + 2}}</v-card-subtitle>
                   <v-card-actions>
@@ -336,7 +348,9 @@
                     >
                       #{{response.top_ten_results.length + idx + 2}}
                     </span>
-                    {{result[0]}}
+                    <a :href="'https://' + response.query.wiki + '.wikipedia.org/wiki/' + result[0]" target="_blank">
+                      {{result[0]}}
+                    </a>
                   </v-list-item-title>
                 </v-list-item-content>
                 <v-list-item-avatar>
