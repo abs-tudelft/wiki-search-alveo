@@ -270,7 +270,7 @@
             <v-card outlined>
               <v-img
                 class="align-end"
-                :src="'wiki_img?article=' + response.top_result[0]"
+                :src="'wiki_img?wiki=' + response.query.wiki + '&article=' + response.top_result[0]"
                 height="400px"
                 gradient="to bottom, rgba(0,0,0,.05), rgba(0,0,0,.3)"
               >
@@ -294,7 +294,7 @@
                 <v-card outlined>
                   <v-img
                     class="align-end"
-                    :src="'wiki_img?article=' + result[0]"
+                    :src="'wiki_img?wiki=' + response.query.wiki + '&article=' + result[0]"
                     height="200px"
                     gradient="to bottom, rgba(0,0,0,.05), rgba(0,0,0,.3)"
                   >
