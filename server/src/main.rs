@@ -266,6 +266,8 @@ fn main() -> Result<(), ()> {
     let xclbin_prefix =
         CString::new("/work/shared/fletcher-alveo/fletcher-alveo-demo-10/alveo/xclbin/word_match")
             .unwrap();
+//     let data_prefix = CString::new("/work/shared/fletcher-alveo/simplewiki").unwrap();
+//     let xclbin_prefix = CString::new("").unwrap();
     let emu_mode = CString::new("hw").unwrap();
     let kernel_name = CString::new("krnl_word_match_rtl").unwrap();
 

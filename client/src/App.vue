@@ -158,7 +158,7 @@
         </v-row>
       </v-container>
 
-      <v-container v-if="!response">
+      <!--<v-container v-if="!response && !loading">
         <v-row justify="center">
           <v-col cols="9">
             <p style="font-size: 1.2em; text-align: justify; text-align-last: center">
@@ -184,12 +184,57 @@
             </p>
           </v-col>
         </v-row>
-      </v-container>
+      </v-container>-->
 
-      <v-container v-if="response">
+      <v-container v-if="response || loading">
         <v-row justify="center">
-          <v-col cols="8">
-            <p style="font-size: 1.2em; text-align: justify; text-align-last: center">
+          <v-col cols="4">
+            <v-row align="center">
+              <v-col cols=2>
+                Alveo
+              </v-col>
+              <v-col cols=6>
+                <v-progress-linear
+                  :value="hw_time / 200"
+                  color="light-blue"
+                  height="16px"
+                  style="transition-duration: 0s"
+                />
+              </v-col>
+              <v-col cols=4>
+                {{hw_time}} ms
+              </v-col>
+            </v-row>
+            <v-row align="center">
+              <v-col cols=2>
+                CPU
+              </v-col>
+              <v-col cols=6>
+                <v-progress-linear
+                  :value="sw_time / 200"
+                  color="orange"
+                  height="16px"
+                  style="transition-duration: 0s"
+                />
+              </v-col>
+              <v-col cols=4>
+                {{sw_time}} ms
+              </v-col>
+            </v-row>
+            <v-row align="center">
+              <v-col cols=2>
+              </v-col>
+              <v-col cols=6 style="text-align: center">
+                <span v-if="!loading">Done! Alveo speedup: {{Number((sw_time / hw_time).toFixed(2))}}x</span>
+                <span v-if="loading && configuration.software">Running on CPU...</span>
+                <span v-if="loading && !configuration.software">Running on Alveo...</span>
+              </v-col>
+              <v-col cols=4>
+              </v-col>
+            </v-row>
+          </v-col>
+          <v-col cols="4">
+            <p style="font-size: 1.2em; text-align: justify; text-align-last: right" v-if="response">
               <span class="font-weight-bold">{{response.stats.num_word_matches}}</span>
               word<span v-if="response.stats.num_word_matches!=1">s</span>
               matched across
@@ -206,18 +251,21 @@
               </span>
               recorded and sorted.
             </p>
-            <p style="text-align: justify; text-align-last: center">
+            <p style="text-align: justify; text-align-last: right" v-if="response">
               The query took
               <span class="font-weight-bold">{{response.stats.time_taken_ms}} ms</span>,
-              making the equivalent compressed article text bandwidth approximately
+              making the equivalent<br/>compressed article text bandwidth approximately
               <span class="font-weight-bold">{{response.stats.bandwidth}}</span>.
             </p>
           </v-col>
         </v-row>
+      </v-container>
+
+      <v-container v-if="response">
         <v-row>
           <v-divider></v-divider>
         </v-row>
-        <v-row v-if="response && response.top_result" justify="center">
+        <v-row v-if="response.top_result" justify="center">
           <v-col cols="6">
             <v-card outlined>
               <v-img
@@ -239,14 +287,9 @@
             </v-card>
           </v-col>
         </v-row>
-        <v-row v-else justify="center">
-          <v-col cols="6" class="headline" justify="center">
-            No results found!
-          </v-col>
-        </v-row>
         <v-row justify="center">
           <v-col cols="9">
-            <v-row v-if="response.top_ten_results" justify="center" dense>
+            <v-row v-if="response.top_result && response.top_ten_results" justify="center" dense>
               <v-col cols="4" v-for="(result, idx) in response.top_ten_results">
                 <v-card outlined>
                   <v-img
@@ -270,18 +313,18 @@
             </v-row>
           </v-col>
         </v-row>
-        <v-row v-if="response.other_results">
+        <v-row v-if="response.top_result && response.other_results">
           <v-divider></v-divider>
         </v-row>
-        <v-row v-if="response.other_results" justify="center">
-          <v-col cols="5" v-if="response.other_results && response.top_ten_results.length == 0">
+        <v-row v-if="response.top_result && response.other_results && response.top_ten_results.length == 0" justify="center">
+          <v-col cols="5">
             <p style="text-align: justify; text-align-last: center">
               Note: kernel result slots overflowed. The matches shown here are a random
               sample of the pages that matched; there may be pages with more matches.
             </p>
           </v-col>
         </v-row>
-        <v-row v-if="response.other_results" justify="center">
+        <v-row v-if="response.top_result && response.other_results" justify="center">
           <v-col cols="4">
             <v-list disabled dense>
               <v-list-item v-for="(result, idx) in response.other_results">
@@ -317,11 +360,11 @@
             </v-expansion-panel>
           </v-expansion-panels>
         </v-row> -->
-        <v-row v-if="response && response.stats">
+        <!--<v-row v-if="response && response.stats">
           <v-alert outlined color="primary" v-if="!loading && response.query">
             <p>{{ response }}</p>
           </v-alert>
-        </v-row>
+        </v-row>-->
       </v-container>
     </v-content>
 
@@ -364,7 +407,10 @@ export default Vue.extend({
       },
       query: undefined,
       response: undefined,
-      loading: false
+      loading: false,
+      timer: undefined,
+      sw_time: 0,
+      hw_time: 0
     };
   },
   methods: {
@@ -372,6 +418,9 @@ export default Vue.extend({
       this.query = undefined;
       this.loading = false;
       this.response = undefined;
+      clearInterval(this.timer);
+      this.sw_time = 0;
+      this.hw_time = 0;
       this.$refs.query.focus();
     },
     getQuery: function() {
@@ -385,12 +434,37 @@ export default Vue.extend({
       this.loading = true;
       this.response = undefined;
       this.configuration.open = false;
+      if (this.configuration.software) {
+        this.sw_time = 0;
+      } else {
+//        this.sw_time = 0;
+        this.hw_time = 0;
+      }
+      this.timer = setInterval(() => {
+        if (this.configuration.software) {
+          this.sw_time += 50;
+        } else {
+          this.hw_time += 50;
+        }
+      }, 50)
       fetch(
         `query?pattern=${this.query}&whole_words=${this.configuration.whole_words}&min_matches=${this.configuration.min_matches}&mode=${mode}`
       ).then(res => res.json()).then(res => {
         if (this.loading) {
           this.loading = false;
           this.response = res;
+          if (this.configuration.software) {
+            this.sw_time = res.stats.time_taken_ms;
+          } else {
+            this.hw_time = res.stats.time_taken_ms;
+          }
+          clearInterval(this.timer);
+//           if (!this.configuration.software) {
+//             this.configuration.software = true;
+//             this.getQuery();
+//           } else {
+//             this.configuration.software = false;
+//           }
         }
       })
     }
