@@ -4,7 +4,7 @@
       <v-container>
         <!-- query input -->
         <v-row justify="center">
-          <v-col cols="9">
+          <v-col cols="10">
             <v-text-field
               ref="query"
               class="display-3 text--primary"
@@ -21,7 +21,7 @@
         <!-- configuration and clear/search -->
         <v-row justify="center">
           <!-- configuration panel -->
-          <v-col cols="6">
+          <v-col cols="6" no-gutters>
             <v-expansion-panels v-model="configuration.open">
               <v-expansion-panel :disabled="loading">
                 <v-expansion-panel-header v-slot="{ open }">
@@ -131,23 +131,28 @@
               </v-expansion-panel>
             </v-expansion-panels>
           </v-col>
-          <v-col justify="end" cols="3">
+          <v-col justify="end" cols="4" no-gutters>
             <div style="text-align: end; width: 100%">
               <v-btn
-                color="warning"
+                color="blue-grey"
                 @click="clear"
-                outlined
-                x-large
+                text
                 :disabled="query === undefined && response === undefined"
-                >Clear</v-btn
+                ><v-icon>mdi-close</v-icon> clear</v-btn
               >
               <v-btn
-                color="success"
-                @click="getQuery"
-                outlined
-                x-large
+                color="teal"
+                @click="getQueryCPU"
+                text
                 :disabled="query === undefined || loading === true"
-                >Search</v-btn
+                ><v-icon>mdi-magnify</v-icon> CPU</v-btn
+              >
+              <v-btn
+                color="light-blue"
+                @click="getQueryAlveo"
+                text
+                :disabled="query === undefined || loading === true"
+                ><v-icon>mdi-magnify</v-icon> Alveo</v-btn
               >
             </div>
           </v-col>
@@ -186,13 +191,18 @@
       </v-container>-->
 
       <v-container v-if="response || loading">
-        <v-row justify="center">
+        <v-row justify="center" align="center" style="min-height: 175px">
           <v-col cols="4">
-            <v-row align="center">
-              <v-col cols=2>
-                Alveo
+            <v-row align="center" no-gutters>
+              <v-col cols=12 style="text-align: center">
+                Execution time
               </v-col>
-              <v-col cols=6>
+            </v-row>
+            <v-row align="center" no-gutters style="padding-top: 10px">
+              <v-col cols=3 no-gutters class="caption" style="text-align: right">
+                ALVEO
+              </v-col>
+              <v-col cols=6 no-gutters style="padding-left: 10px; padding-right: 10px">
                 <v-progress-linear
                   :value="hw_time / 200"
                   color="light-blue"
@@ -200,35 +210,37 @@
                   style="transition-duration: 0s"
                 />
               </v-col>
-              <v-col cols=4>
-                {{hw_time}} ms
+              <v-col cols=3 no-gutters>
+                <span v-if="hw_time !== undefined" class="font-weight-bold">{{hw_time}} ms</span>
+                <span v-else class="text--secondary font-italic">Unknown</span>
               </v-col>
             </v-row>
-            <v-row align="center">
-              <v-col cols=2>
+            <v-row align="center" no-gutters style="padding-top: 10px">
+              <v-col cols=3 no-gutters class="caption" style="text-align: right">
                 CPU
               </v-col>
-              <v-col cols=6>
+              <v-col cols=6 no-gutters style="padding-left: 10px; padding-right: 10px">
                 <v-progress-linear
                   :value="sw_time / 200"
-                  color="orange"
+                  color="teal"
                   height="16px"
                   style="transition-duration: 0s"
                 />
               </v-col>
-              <v-col cols=4>
-                {{sw_time}} ms
+              <v-col cols=3 no-gutters>
+                <span v-if="sw_time !== undefined" class="font-weight-bold">{{sw_time}} ms</span>
+                <span v-else class="text--secondary font-italic">Unknown</span>
               </v-col>
             </v-row>
-            <v-row align="center">
-              <v-col cols=2>
-              </v-col>
-              <v-col cols=6 style="text-align: center">
-                <span v-if="!loading">Done! Alveo speedup: {{(sw_time / hw_time).toFixed(2)}}x</span>
-                <span v-if="loading && configuration.software">Running on CPU...</span>
-                <span v-if="loading && !configuration.software">Running on Alveo...</span>
-              </v-col>
-              <v-col cols=4>
+            <v-row align="center" no-gutters style="padding-top: 10px">
+              <v-col cols=12 style="text-align: center">
+                <span v-if="!loading && sw_time !== undefined && hw_time !== undefined">
+                  Done! Alveo speedup:
+                  <span class="font-weight-bold">{{(sw_time / hw_time).toFixed(2)}}x</span>
+                </span>
+                <span v-else-if="loading && configuration.software">Running on CPU...</span>
+                <span v-else-if="loading && !configuration.software">Running on Alveo...</span>
+                <span v-else>Ready</span>
               </v-col>
             </v-row>
           </v-col>
@@ -241,28 +253,39 @@
               page<span v-if="response.stats.num_page_matches!=1">s</span>,<br/>
               of which
               <span v-if="response.stats.num_result_records!=response.stats.num_page_matches">
-                only <span class="font-weight-bold">{{response.stats.num_result_records}}</span>
+                the first <span class="font-weight-bold">{{response.stats.num_result_records}}</span>
                 page match<span v-if="response.stats.num_result_records!=1">es were</span>
                 <span v-else>was</span>
               </span>
               <span v-else>
                 all page matches were
               </span>
-              recorded and sorted.
+              recorded.
             </p>
             <p style="text-align: justify; text-align-last: right" v-if="response">
               The query took
-              <span class="font-weight-bold">{{response.stats.time_taken_ms}} ms</span>,
+              <span class="font-weight-bold">{{response.stats.time_taken_ms}} ms</span>
+              <span v-if="response.query.mode == 0">on Alveo,</span>
+              <span v-else>with {{response.query.mode}} thread<span v-if="response.query.mode != 1">s,</span></span>
               making the equivalent<br/>compressed article text bandwidth approximately
               <span class="font-weight-bold">{{response.stats.bandwidth}}</span>.
             </p>
           </v-col>
         </v-row>
+        <v-row>
+          <v-divider></v-divider>
+        </v-row>
+      </v-container>
+
+      <v-container v-if="loading">
+        <v-row justify="center" class="title">
+          Loading...
+        </v-row>
       </v-container>
 
       <v-container v-if="response">
-        <v-row>
-          <v-divider></v-divider>
+        <v-row justify="center" class="title">
+          Top results for "{{response.query.pattern}}"
         </v-row>
         <v-row v-if="response.top_result" justify="center">
           <v-col cols="6">
@@ -330,8 +353,9 @@
         <v-row v-if="response.top_result && response.other_results && response.top_ten_results.length == 0" justify="center">
           <v-col cols="5">
             <p style="text-align: justify; text-align-last: center">
-              Note: kernel result slots overflowed. The matches shown here are a random
-              sample of the pages that matched; there may be pages with more matches.
+              Note: one or more kernels ran out of output buffer space, so not all
+              page matches could be recorded to be sorted. Increase the minimum
+              number of matches required per page to work around this!
             </p>
           </v-col>
         </v-row>
@@ -386,21 +410,21 @@
     <v-footer class="grey lighten-3" style="position: fixed; left: 0px; right: 0px; bottom: 0px">
       <v-container>
         <v-row align="end" justify="center" no-gutters>
-          <v-col self-align="center" align="start" cols="5">
+          <v-col self-align="center" align="start" cols="4">
             <div v-if="server_status">
               <v-row align="center" no-gutters>
-                <v-col cols=2 no-gutters>
+                <v-col cols=3 no-gutters class="text--secondary overline" style="text-align: right">
                   Server status
                 </v-col>
-                <v-col cols=10 no-gutters>
+                <v-col cols=9 no-gutters class="caption" style="padding-left: 10px">
                   {{server_status.status}}
                 </v-col>
               </v-row>
               <v-row align="center" no-gutters>
-                <v-col cols=2 no-gutters>
+                <v-col cols=3 no-gutters class="text--secondary overline" style="text-align: right">
                   Alveo total
                 </v-col>
-                <v-col cols=6 no-gutters>
+                <v-col cols=6 no-gutters style="padding-left: 10px; padding-right: 10px">
                   <v-progress-linear
                     :value="server_status.power_in * 1.5"
                     color="light-blue"
@@ -408,15 +432,15 @@
                     style="transition-duration: 0.5s"
                   />
                 </v-col>
-                <v-col offset=1 cols=3 no-gutters>
+                <v-col cols=3 no-gutters class="caption" style="text-align: left">
                   {{(server_status.power_in).toFixed(1)}} W
                 </v-col>
               </v-row>
               <v-row align="center" no-gutters>
-                <v-col cols=2 no-gutters>
+                <v-col cols=3 no-gutters class="text--secondary overline" style="text-align: right">
                   Alveo VCCint
                 </v-col>
-                <v-col cols=6 no-gutters>
+                <v-col cols=6 no-gutters style="padding-left: 10px; padding-right: 10px">
                   <v-progress-linear
                     :value="server_status.power_vccint * 1.5"
                     color="light-blue"
@@ -424,22 +448,22 @@
                     style="transition-duration: 0.5s"
                   />
                 </v-col>
-                <v-col offset=1 cols=3 no-gutters>
+                <v-col cols=3 no-gutters class="caption" style="text-align: left">
                   {{(server_status.power_vccint).toFixed(1)}} W
                 </v-col>
               </v-row>
             </div>
           </v-col>
-          <v-col align="center" justify="center" cols="1">
+          <v-col align="center" justify="center" cols="2">
             <img src="../assets/xilinx-logo.svg" height="40px" />
           </v-col>
-          <v-col align="center" justify="center" cols="1">
+          <v-col align="center" justify="center" cols="2">
             <img
               src="https://repository-images.githubusercontent.com/120948886/c0dcc400-80aa-11e9-8a51-c7ff5364fe0a"
               height="60px"
             />
           </v-col>
-          <v-col align="center" justify="center" cols="1">
+          <v-col align="center" justify="center" cols="2">
             <img src="../assets/tudelft-logo.svg" height="50px" />
           </v-col>
           <!-- not sure about the license for this one since we're not in any way affiliated
@@ -469,8 +493,8 @@ export default Vue.extend({
       response: undefined,
       loading: false,
       timer: undefined,
-      sw_time: 0,
-      hw_time: 0,
+      sw_time: undefined,
+      hw_time: undefined,
       server_status: undefined
     };
   },
@@ -483,9 +507,17 @@ export default Vue.extend({
       this.loading = false;
       this.response = undefined;
       clearInterval(this.timer);
-      this.sw_time = 0;
-      this.hw_time = 0;
+      this.sw_time = undefined;
+      this.hw_time = undefined;
       this.$refs.query.focus();
+    },
+    getQueryAlveo: function() {
+      this.configuration.software = false;
+      this.getQuery();
+    },
+    getQueryCPU: function() {
+      this.configuration.software = true;
+      this.getQuery();
     },
     getQuery: function() {
       if (this.loading) {
@@ -501,7 +533,6 @@ export default Vue.extend({
       if (this.configuration.software) {
         this.sw_time = 0;
       } else {
-//        this.sw_time = 0;
         this.hw_time = 0;
       }
       this.timer = setInterval(() => {
