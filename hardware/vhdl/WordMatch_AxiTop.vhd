@@ -41,7 +41,7 @@ entity WordMatch_AxiTop is
     BUS_DATA_WIDTH              : natural := 64;
     BUS_LEN_WIDTH               : natural := 8;
     BUS_READ_INNER_DATA_WIDTH   : natural := 64;
-    BUS_READ_BURST_MAX_LEN      : natural := 64;
+    BUS_READ_BURST_MAX_LEN      : natural := 128;
     BUS_READ_BURST_STEP_LEN     : natural := 8;
     BUS_WRITE_INNER_DATA_WIDTH  : natural := 32;
     BUS_WRITE_BURST_MAX_LEN     : natural := 16;
@@ -464,7 +464,7 @@ begin
       BUS_DATA_WIDTH            => BUS_READ_INNER_DATA_WIDTH,
       NUM_SLAVE_PORTS           => 4,
       ARB_METHOD                => "RR-STICKY",
-      MAX_OUTSTANDING           => 4,
+      MAX_OUTSTANDING           => 8,
       RAM_CONFIG                => "",
       SLV_REQ_SLICES            => true,
       MST_REQ_SLICE             => true,
@@ -528,7 +528,7 @@ begin
       BUS_DATA_WIDTH            => BUS_WRITE_INNER_DATA_WIDTH,
       NUM_SLAVE_PORTS           => 2,
       ARB_METHOD                => "RR-STICKY",
-      MAX_OUTSTANDING           => 2,
+      MAX_OUTSTANDING           => 4,
       RAM_CONFIG                => "",
       SLV_REQ_SLICES            => true,
       MST_REQ_SLICE             => true,
@@ -612,7 +612,7 @@ begin
         BUS_BURST_STEP_LEN      => BUS_READ_BURST_STEP_LEN,
         BUS_BURST_MAX_LEN       => BUS_READ_BURST_MAX_LEN,
         INDEX_WIDTH             => 32,
-        CFG                     => "listprim(8;epc=8,idx_fifo_xclk_stages=2,fifo_xclk_stages=2)",
+        CFG                     => "listprim(8;epc=8,idx_fifo_xclk_stages=2,fifo_xclk_stages=2,bus_fifo_depth=300)",
         CMD_TAG_ENABLE          => true,
         CMD_TAG_WIDTH           => 1
       )
