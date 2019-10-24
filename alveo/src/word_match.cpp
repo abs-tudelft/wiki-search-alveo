@@ -104,10 +104,10 @@ std::shared_ptr<arrow::RecordBatch> WordMatchDatasetLoader::next() {
 
     // Load the RecordBatch into the default memory pool as a single blob
     // of data.
-    std::shared_ptr<arrow::io::ReadableFile> file;
-    arrow::Status status = arrow::io::ReadableFile::Open(fname, &file);
+    std::shared_ptr<arrow::io::MemoryMappedFile> file;
+    arrow::Status status = arrow::io::MemoryMappedFile::Open(fname, arrow::io::FileMode::type::READ, &file);
     if (!status.ok()) {
-        throw std::runtime_error("ReadableFile::Open failed for " + fname + ": " + status.ToString());
+        throw std::runtime_error("MemoryMappedFile::Open failed for " + fname + ": " + status.ToString());
     }
     std::shared_ptr<arrow::ipc::RecordBatchFileReader> reader;
     status = arrow::ipc::RecordBatchFileReader::Open(file, &reader);
