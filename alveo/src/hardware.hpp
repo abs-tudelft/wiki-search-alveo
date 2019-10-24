@@ -71,7 +71,7 @@ public:
 
     HardwareWordMatchKernel(
         AlveoKernelInstance &context,
-        float clock0, float clock1, int num_results = 32);
+        float clock0, float clock1, int num_results = 256);
 
     /**
      * Loads a recordbatch into the on-device OpenCL buffers for this instance.

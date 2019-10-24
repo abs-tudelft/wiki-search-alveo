@@ -143,7 +143,7 @@ void SoftwareWordMatch::execute(const WordMatchConfig &config,
                 presults.num_word_matches += num_matches;
                 if (num_matches >= config.min_matches) {
                     presults.num_page_matches++;
-                    if (presults.cpp_page_match_counts.size() < 32) {
+                    if (presults.cpp_page_match_counts.size() < 256) {
                         presults.cpp_page_match_counts.push_back(num_matches);
                         presults.cpp_page_match_title_values += titles->GetString(ii);
                         presults.cpp_page_match_title_offsets.push_back(
