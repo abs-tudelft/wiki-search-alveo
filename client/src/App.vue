@@ -190,6 +190,63 @@
         </v-row>
       </v-container>-->
 
+      <v-container v-if="!response && !loading">
+        <v-row justify="center">
+          <v-col cols="10" style="text-align: center">
+            <p class="display-2 font-weight-light" style="margin-bottom: 25px; margin-top: 25px">
+              Accelerate big data applications with ease
+            </p>
+            <p class="display-1 font-weight-light" style="margin-bottom: 40px; text-transform: uppercase">
+              using Fletcher and Xilinx Alveo
+            </p>
+          </v-col>
+        </v-row>
+        <v-row justify="center" no-gutters>
+          <v-col cols="10" no-gutters>
+            <v-row justify="center" no-gutters>
+              <v-spacer></v-spacer>
+              <v-col align="center" justify="center" no-gutters>
+                <img src="../assets/spark-logo.png" height="60px" cols="auto" />
+              </v-col>
+              <v-spacer></v-spacer>
+              <v-col align="center" justify="center" no-gutters>
+                <img src="../assets/arrow-logo.svg" height="55px" cols="auto" style="margin-top: 5px"/>
+              </v-col>
+              <v-spacer></v-spacer>
+              <v-col align="center" justify="center" no-gutters>
+                <!--<img src="../assets/fletcher-logo.png" height="60px" cols="auto" />-->
+                <img src="../assets/fletcher-old-logo.png" height="60px" cols="auto" />
+                <!--<img src="https://repository-images.githubusercontent.com/120948886/c0dcc400-80aa-11e9-8a51-c7ff5364fe0a" height="60px" cols="auto" />-->
+              </v-col>
+              <v-spacer></v-spacer>
+              <v-col align="center" justify="center" no-gutters>
+                <img src="../assets/xilinx-alveo-logo.png" height="55px" cols="auto" />
+              </v-col>
+              <v-spacer></v-spacer>
+            </v-row>
+          </v-col>
+        </v-row>
+        <v-row justify="center">
+          <v-col cols="10" style="text-align: center">
+            <p class="headline font-weight-light" style="margin-top: 25px; margin-bottom: 40px">
+              Type a query to search through a Snappy-compressed Arrow table containing all of English Wikipedia in real-time!
+            </p>
+            <p style="margin-bottom: 8px">
+              <v-icon color="light-blue darken-1">mdi-check</v-icon>
+              Time to initial solution: two days — two weeks total to optimize
+            </p>
+            <p style="margin-bottom: 8px">
+              <v-icon color="light-blue darken-1">mdi-check</v-icon>
+              Seamless integration with big-data frameworks through Arrow and Fletcher
+            </p>
+            <p style="margin-bottom: 8px">
+              <v-icon color="light-blue darken-1">mdi-check</v-icon>
+              Open-source hardware Snappy decompression — easily saturating PCI Express 3.0 x16
+            </p>
+          </v-col>
+        </v-row>
+      </v-container>
+
       <v-container v-if="response || loading">
         <v-row justify="center" align="center" style="min-height: 175px">
           <v-col cols="4">
@@ -284,8 +341,11 @@
       </v-container>
 
       <v-container v-if="response">
-        <v-row justify="center" class="title">
+        <v-row justify="center" class="title" v-if="response.top_result">
           Top results for "{{response.query.pattern}}"
+        </v-row>
+        <v-row justify="center" class="title" v-else>
+          No results found for "{{response.query.pattern}}"
         </v-row>
         <v-row v-if="response.top_result" justify="center">
           <v-col cols="6">
@@ -404,12 +464,13 @@
         </v-row>-->
       </v-container>
 
-      <div style="height: 200px">
+      <div style="height: 90px"></div>
     </v-content>
 
     <v-footer class="grey lighten-3" style="position: fixed; left: 0px; right: 0px; bottom: 0px">
       <v-container>
         <v-row align="end" justify="center" no-gutters>
+          <v-spacer></v-spacer>
           <v-col self-align="center" align="start" cols="4">
             <div v-if="server_status">
               <v-row align="center" no-gutters>
@@ -454,18 +515,25 @@
               </v-row>
             </div>
           </v-col>
-          <v-col align="center" justify="center" cols="2">
-            <img src="../assets/xilinx-logo.svg" height="40px" />
+          <v-spacer></v-spacer>
+          <v-col align="center" justify="center">
+            <img src="../assets/xilinx-logo.svg" height="40px" cols="auto" style="margin-bottom: 4px" />
           </v-col>
-          <v-col align="center" justify="center" cols="2">
-            <img
-              src="https://repository-images.githubusercontent.com/120948886/c0dcc400-80aa-11e9-8a51-c7ff5364fe0a"
-              height="60px"
-            />
+          <v-spacer></v-spacer>
+          <v-col align="center" justify="center">
+            <img src="../assets/fitoptivis-logo.png" height="50px" cols="auto" />
           </v-col>
-          <v-col align="center" justify="center" cols="2">
-            <img src="../assets/tudelft-logo.svg" height="50px" />
+          <v-spacer></v-spacer>
+          <v-col align="center" justify="center">
+            <img src="../assets/tudelft-logo.svg" height="50px" cols="auto" style="margin-bottom: 10px" />
           </v-col>
+          <v-spacer></v-spacer>
+          <v-col align="center" justify="center">
+            <!--<img src="../assets/fletcher-logo.png" height="50px" cols="auto" />-->
+            <img src="../assets/fletcher-old-logo.png" height="50px" cols="auto" />
+            <!--<img src="https://repository-images.githubusercontent.com/120948886/c0dcc400-80aa-11e9-8a51-c7ff5364fe0a" height="50px" cols="auto" />-->
+          </v-col>
+          <v-spacer></v-spacer>
           <!-- not sure about the license for this one since we're not in any way affiliated
           <v-col align="center" justify="center" cols="2">
             <img src="../assets/wikipedia-logo.svg" height="50px" />
@@ -495,6 +563,7 @@ export default Vue.extend({
       timer: undefined,
       sw_time: undefined,
       hw_time: undefined,
+      timer_start: 0.0,
       server_status: undefined
     };
   },
@@ -535,25 +604,38 @@ export default Vue.extend({
       } else {
         this.hw_time = 0;
       }
+      this.timer_start = performance.now();
       this.timer = setInterval(() => {
+        var time = Math.round(performance.now() - this.timer_start - Math.random() * 20 - 100)
+        if (time < 0) {
+          time = 0;
+        }
         if (this.configuration.software) {
-          this.sw_time += 50;
+          if (time < this.sw_time) {
+            this.sw_time += 1;
+          } else {
+            this.sw_time = time;
+          }
         } else {
-          this.hw_time += 50;
+          if (time < this.hw_time) {
+            this.hw_time += 1;
+          } else {
+            this.hw_time = time;
+          }
         }
       }, 50)
       fetch(
         `query?pattern=${this.query}&whole_words=${this.configuration.whole_words}&min_matches=${this.configuration.min_matches}&mode=${mode}`
       ).then(res => res.json()).then(res => {
         if (this.loading) {
-          this.loading = false;
-          this.response = res;
+          clearInterval(this.timer);
           if (this.configuration.software) {
             this.sw_time = res.stats.time_taken_ms;
           } else {
             this.hw_time = res.stats.time_taken_ms;
           }
-          clearInterval(this.timer);
+          this.loading = false;
+          this.response = res;
 //           if (!this.configuration.software) {
 //             this.configuration.software = true;
 //             this.getQuery();
