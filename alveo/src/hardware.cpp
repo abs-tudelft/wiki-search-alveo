@@ -41,8 +41,17 @@ void HardwareWordMatchKernel::clear_chunks() {
 }
 
 HardwareWordMatchKernel::HardwareWordMatchKernel(
-    AlveoKernelInstance &context, float clock0, float clock1, int num_results)
-    : context(context), num_results(num_results), clock0(clock0), clock1(clock1)
+    AlveoKernelInstance &context,
+    float clock0,
+    float clock1,
+    unsigned int num_subkernels,
+    int num_results
+) :
+    context(context),
+    num_results(num_results),
+    clock0(clock0),
+    clock1(clock1),
+    num_sub(num_subkernels)
 {
 
     // Detect which bank this kernel is connected to.
@@ -68,11 +77,11 @@ HardwareWordMatchKernel::HardwareWordMatchKernel(
 
     // Set the kernel arguments that don't ever change.
     context.set_arg(4, (unsigned int)0);
-    context.set_arg(8, result_title_offset->buffer);
-    context.set_arg(9, result_title_values->buffer);
-    context.set_arg(10, result_matches->buffer);
-    context.set_arg(11, (unsigned int)num_results);
-    context.set_arg(12, result_stats->buffer);
+    context.set_arg(5+num_sub, result_title_offset->buffer);
+    context.set_arg(6+num_sub, result_title_values->buffer);
+    context.set_arg(7+num_sub, result_matches->buffer);
+    context.set_arg(8+num_sub, (unsigned int)num_results);
+    context.set_arg(9+num_sub, result_stats->buffer);
 
     // Reset the dataset.
     clear_chunks();
@@ -110,9 +119,9 @@ unsigned int HardwareWordMatchKernel::size() const {
 void HardwareWordMatchKernel::configure(const HardwareWordMatchConfig &config) {
 
     // Configure the command-specific kernel arguments.
-    context.set_arg(21, config.search_config);
+    context.set_arg(18+num_sub, config.search_config);
     for (int i = 0; i < 8; i++) {
-        context.set_arg(13 + i, config.pattern_data[i]);
+        context.set_arg(10+num_sub + i, config.pattern_data[i]);
     }
 
 }
@@ -130,9 +139,9 @@ cl_event HardwareWordMatchKernel::enqueue_for_chunk_(unsigned int chunk) {
         context.set_arg(1, chunks[chunk].title_values->buffer);
         context.set_arg(2, chunks[chunk].text_offset->buffer);
         context.set_arg(3, chunks[chunk].text_values->buffer);
-        context.set_arg(5, (unsigned int)chunks[chunk].num_rows / 3);
-        context.set_arg(6, (unsigned int)(chunks[chunk].num_rows * 2) / 3);
-        context.set_arg(7, (unsigned int)chunks[chunk].num_rows);
+        for (unsigned int i = 1; i <= num_sub; i++) {
+            context.set_arg(4+i, (unsigned int)(chunks[chunk].num_rows * i) / num_sub);
+        }
 
         // Remember which chunk we're configured for.
         current_chunk = chunk;
@@ -240,14 +249,19 @@ void HardwareWordMatchKernel::execute_chunk(unsigned int chunk, WordMatchPartial
  * `.[device].xclbin` suffix (this is chosen automatically), and the name
  * of the kernel in the xclbin file.
  */
-HardwareWordMatch::HardwareWordMatch(const std::string &bin_prefix, const std::string &kernel_name, bool quiet)
-    : context(bin_prefix, kernel_name, quiet)
+HardwareWordMatch::HardwareWordMatch(
+    const std::string &bin_prefix,
+    const std::string &kernel_name,
+    unsigned int num_subkernels,
+    bool quiet
+) :
+    context(bin_prefix, kernel_name, quiet)
 {
 
     // Construct HardwareWordMatchKernel objects for each subdevice.
     for (auto instance : context.instances) {
         kernels.push_back(std::make_shared<HardwareWordMatchKernel>(
-            *instance, context.clock0, context.clock1));
+            *instance, context.clock0, context.clock1, num_subkernels));
     }
 
 }

@@ -72,7 +72,8 @@ int word_match_init(
 
                 // Reload hardware context.
                 if (progress) progress(user, "Opening new Alveo OpenCL context...");
-                state->hw_impl = std::make_shared<HardwareWordMatch>(xclbin_prefix, config->kernel_name, true);
+                state->hw_impl = std::make_shared<HardwareWordMatch>(
+                    xclbin_prefix, config->kernel_name, config->num_subkernels, true);
                 state->current_xclbin_prefix = xclbin_prefix;
                 state->current_data_prefix = "";
                 if (progress) progress(user, "Opening new Alveo OpenCL context... done");

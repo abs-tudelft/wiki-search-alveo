@@ -16,12 +16,14 @@ typedef struct {
 
     // Alveo binary information. The binary file loaded will be
     // `[xclbin_prefix].[emu_mode].[device].xclbin`, where `[device]` is
-    // autodetected. `kernel_name` must specify the name of the kernel. If
-    // `data_prefix` is null or empty, the hardware will not be loaded, and the
-    // other parameters are ignored.
+    // autodetected. `kernel_name` must specify the name of the kernel, and
+    // num_subkernels must match the NUM_SUB generic in the hardware
+    // description. If `data_prefix` is null or empty, the hardware will not
+    // be loaded, and the other parameters are ignored.
     const char *xclbin_prefix;
     const char *emu_mode;
     const char *kernel_name;
+    unsigned int num_subkernels;
 
     // Whether the data should remain loaded in memory to allow for software
     // runs.

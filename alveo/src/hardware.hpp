@@ -47,6 +47,8 @@ private:
     float clock0;
     float clock1;
 
+    const unsigned int num_sub;
+
     // Input buffers.
     std::vector<HardwareWordMatchDataChunk> chunks;
     unsigned int current_chunk;
@@ -71,7 +73,9 @@ public:
 
     HardwareWordMatchKernel(
         AlveoKernelInstance &context,
-        float clock0, float clock1, int num_results = 256);
+        float clock0, float clock1,
+        unsigned int num_subkernels,
+        int num_results = 256);
 
     /**
      * Loads a recordbatch into the on-device OpenCL buffers for this instance.
@@ -144,7 +148,11 @@ public:
      * `.[device].xclbin` suffix (this is chosen automatically), and the name
      * of the kernel in the xclbin file.
      */
-    HardwareWordMatch(const std::string &bin_prefix, const std::string &kernel_name, bool quiet=false);
+    HardwareWordMatch(
+        const std::string &bin_prefix,
+        const std::string &kernel_name,
+        unsigned int num_subkernels=3,
+        bool quiet=false);
 
     /**
      * Resets the dataset stored in device memory.

@@ -410,6 +410,7 @@ fn main() -> Result<(), ()> {
         xclbin_prefix: xclbin_prefix.as_ptr(),
         emu_mode: emu_mode.as_ptr(),
         kernel_name: kernel_name.as_ptr(),
+        num_subkernels: 3u32,
         keep_loaded: 1i32,
     };
 
