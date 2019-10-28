@@ -396,11 +396,9 @@ fn main() -> Result<(), ()> {
     let api = query.or(wiki_img).or(client).or(status);
 
     // Host application configuration setup
-    let data_prefix = CString::new("/work/mbrobbel/wiki/enwiki-no-meta/enwiki-no-meta").unwrap();
-    let xclbin_prefix =
-        CString::new("/work/shared/fletcher-alveo/fletcher-alveo-demo-10/alveo/xclbin/word_match")
-            .unwrap();
-//     let data_prefix = CString::new("/work/shared/fletcher-alveo/simplewiki").unwrap();
+//     let data_prefix = CString::new("/work/shared/fletcher-alveo/enwiki-no-meta").unwrap();
+    let xclbin_prefix = CString::new("../alveo/xclbin/word_match").unwrap();
+    let data_prefix = CString::new("/work/shared/fletcher-alveo/simplewiki").unwrap();
 //     let xclbin_prefix = CString::new("").unwrap();
     let emu_mode = CString::new("hw").unwrap();
     let kernel_name = CString::new("krnl_word_match_rtl").unwrap();
