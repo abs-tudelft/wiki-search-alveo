@@ -400,7 +400,7 @@ begin
       v => '0'
     );
     type f_index_r_array is array (natural range <>) of f_index_r_type;
-    variable f_index_r : f_index_r_array(0 to 3) := (others => F_INDEX_R_RESET);
+    variable f_index_r : f_index_r_array(0 to 4) := (others => F_INDEX_R_RESET);
 
     -- Private declarations for field res_title_offs_addr: Address for the
     -- matched article title offset buffer.
@@ -1367,6 +1367,41 @@ begin
 
           end if;
 
+          -- Read logic for field index4: input dataset indices.
+
+          if r_req then
+            tmp_data20 := r_hold(19 downto 0);
+          end if;
+          if r_req then
+
+            -- Regular access logic. Read mode: enabled.
+            tmp_data20 := f_index_r((4)).d;
+            r_ack := true;
+
+          end if;
+          if r_req then
+            r_hold(19 downto 0) := tmp_data20;
+          end if;
+
+          -- Read logic for block index4_reg: block containing bits 31..0 of
+          -- register `index4_reg` (`INDEX4`).
+          if r_req then
+
+            r_data := r_hold(31 downto 0);
+            r_multi := '0';
+
+          end if;
+
+        when "010100" =>
+          -- r_addr = 000000000000000000000000010100--
+
+          if r_req then
+
+            -- Clear holding register location prior to read.
+            r_hold := (others => '0');
+
+          end if;
+
           -- Read logic for field res_title_offs_addr: Address for the matched
           -- article title offset buffer.
 
@@ -1394,8 +1429,8 @@ begin
 
           end if;
 
-        when "010001" =>
-          -- r_addr = 000000000000000000000000010001--
+        when "010101" =>
+          -- r_addr = 000000000000000000000000010101--
 
           -- Read logic for block res_title_offs_addr_reg_high: block containing
           -- bits 63..32 of register `res_title_offs_addr_reg`
@@ -1412,8 +1447,8 @@ begin
 
           end if;
 
-        when "010010" =>
-          -- r_addr = 000000000000000000000000010010--
+        when "010110" =>
+          -- r_addr = 000000000000000000000000010110--
 
           if r_req then
 
@@ -1449,8 +1484,8 @@ begin
 
           end if;
 
-        when "010011" =>
-          -- r_addr = 000000000000000000000000010011--
+        when "010111" =>
+          -- r_addr = 000000000000000000000000010111--
 
           -- Read logic for block res_title_val_addr_reg_high: block containing
           -- bits 63..32 of register `res_title_val_addr_reg`
@@ -1467,8 +1502,8 @@ begin
 
           end if;
 
-        when "010100" =>
-          -- r_addr = 000000000000000000000000010100--
+        when "011000" =>
+          -- r_addr = 000000000000000000000000011000--
 
           if r_req then
 
@@ -1503,8 +1538,8 @@ begin
 
           end if;
 
-        when "010101" =>
-          -- r_addr = 000000000000000000000000010101--
+        when "011001" =>
+          -- r_addr = 000000000000000000000000011001--
 
           -- Read logic for block res_match_addr_reg_high: block containing bits
           -- 63..32 of register `res_match_addr_reg` (`RES_MATCH_ADDR`).
@@ -1520,8 +1555,8 @@ begin
 
           end if;
 
-        when "010110" =>
-          -- r_addr = 000000000000000000000000010110--
+        when "011010" =>
+          -- r_addr = 000000000000000000000000011010--
 
           if r_req then
 
@@ -1556,8 +1591,8 @@ begin
 
           end if;
 
-        when "010111" =>
-          -- r_addr = 000000000000000000000000010111--
+        when "011011" =>
+          -- r_addr = 000000000000000000000000011011--
 
           -- Read logic for block res_stats_addr_reg_high: block containing bits
           -- 63..32 of register `res_stats_addr_reg` (`RES_STATS_ADDR`).
@@ -1573,8 +1608,8 @@ begin
 
           end if;
 
-        when "011000" =>
-          -- r_addr = 000000000000000000000000011000--
+        when "011100" =>
+          -- r_addr = 000000000000000000000000011100--
 
           if r_req then
 
@@ -1668,8 +1703,8 @@ begin
 
           end if;
 
-        when "011001" =>
-          -- r_addr = 000000000000000000000000011001--
+        when "011101" =>
+          -- r_addr = 000000000000000000000000011101--
 
           if r_req then
 
@@ -1763,8 +1798,8 @@ begin
 
           end if;
 
-        when "011010" =>
-          -- r_addr = 000000000000000000000000011010--
+        when "011110" =>
+          -- r_addr = 000000000000000000000000011110--
 
           if r_req then
 
@@ -1858,8 +1893,8 @@ begin
 
           end if;
 
-        when "011011" =>
-          -- r_addr = 000000000000000000000000011011--
+        when "011111" =>
+          -- r_addr = 000000000000000000000000011111--
 
           if r_req then
 
@@ -1953,8 +1988,8 @@ begin
 
           end if;
 
-        when "011100" =>
-          -- r_addr = 000000000000000000000000011100--
+        when "100000" =>
+          -- r_addr = 000000000000000000000000100000--
 
           if r_req then
 
@@ -2048,8 +2083,8 @@ begin
 
           end if;
 
-        when "011101" =>
-          -- r_addr = 000000000000000000000000011101--
+        when "100001" =>
+          -- r_addr = 000000000000000000000000100001--
 
           if r_req then
 
@@ -2143,8 +2178,8 @@ begin
 
           end if;
 
-        when "011110" =>
-          -- r_addr = 000000000000000000000000011110--
+        when "100010" =>
+          -- r_addr = 000000000000000000000000100010--
 
           if r_req then
 
@@ -2238,8 +2273,8 @@ begin
 
           end if;
 
-        when "011111" =>
-          -- r_addr = 000000000000000000000000011111--
+        when "100011" =>
+          -- r_addr = 000000000000000000000000100011--
 
           if r_req then
 
@@ -2333,8 +2368,8 @@ begin
 
           end if;
 
-        when "100000" =>
-          -- r_addr = 000000000000000000000000100000--
+        when "100100" =>
+          -- r_addr = 000000000000000000000000100100--
 
           if r_req then
 
@@ -2404,8 +2439,8 @@ begin
 
           end if;
 
-        when "100001" =>
-          -- r_addr = 000000000000000000000000100001--
+        when "100101" =>
+          -- r_addr = 000000000000000000000000100101--
 
           if r_req then
 
@@ -2443,8 +2478,8 @@ begin
 
           end if;
 
-        when "100010" =>
-          -- r_addr = 000000000000000000000000100010--
+        when "100110" =>
+          -- r_addr = 000000000000000000000000100110--
 
           if r_req then
 
@@ -2479,8 +2514,8 @@ begin
 
           end if;
 
-        when "100011" =>
-          -- r_addr = 000000000000000000000000100011--
+        when "100111" =>
+          -- r_addr = 000000000000000000000000100111--
 
           if r_req then
 
@@ -2515,8 +2550,8 @@ begin
 
           end if;
 
-        when "100100" =>
-          -- r_addr = 000000000000000000000000100100--
+        when "101000" =>
+          -- r_addr = 000000000000000000000000101000--
 
           if r_req then
 
@@ -2552,8 +2587,8 @@ begin
 
           end if;
 
-        when "100101" =>
-          -- r_addr = 000000000000000000000000100101--
+        when "101001" =>
+          -- r_addr = 000000000000000000000000101001--
 
           if r_req then
 
@@ -2588,8 +2623,8 @@ begin
 
           end if;
 
-        when "100110" =>
-          -- r_addr = 000000000000000000000000100110--
+        when "101010" =>
+          -- r_addr = 000000000000000000000000101010--
 
           if r_req then
 
@@ -2624,8 +2659,8 @@ begin
 
           end if;
 
-        when others => -- "100111"
-          -- r_addr = 000000000000000000000000100111--
+        when others => -- "101011"
+          -- r_addr = 000000000000000000000000101011--
 
           if r_req then
 
@@ -3035,6 +3070,31 @@ begin
         when "010000" =>
           -- w_addr = 000000000000000000000000010000--
 
+          -- Write logic for block index4_reg: block containing bits 31..0 of
+          -- register `index4_reg` (`INDEX4`).
+          if w_req or w_lreq then
+            w_hold(31 downto 0) := w_data;
+            w_hstb(31 downto 0) := w_strb;
+            w_multi := '0';
+          end if;
+
+          -- Write logic for field index4: input dataset indices.
+
+          tmp_data20 := w_hold(19 downto 0);
+          tmp_strb20 := w_hstb(19 downto 0);
+          if w_req then
+
+            -- Regular access logic. Write mode: masked.
+
+            f_index_r((4)).d := (f_index_r((4)).d and not tmp_strb20)
+                or tmp_data20;
+            w_ack := true;
+
+          end if;
+
+        when "010100" =>
+          -- w_addr = 000000000000000000000000010100--
+
           -- Write logic for block res_title_offs_addr_reg_low: block containing
           -- bits 31..0 of register `res_title_offs_addr_reg`
           -- (`RES_TITLE_OFFS_ADDR`).
@@ -3047,8 +3107,8 @@ begin
             w_ack := true;
           end if;
 
-        when "010001" =>
-          -- w_addr = 000000000000000000000000010001--
+        when "010101" =>
+          -- w_addr = 000000000000000000000000010101--
 
           -- Write logic for block res_title_offs_addr_reg_high: block
           -- containing bits 63..32 of register `res_title_offs_addr_reg`
@@ -3075,8 +3135,8 @@ begin
 
           end if;
 
-        when "010010" =>
-          -- w_addr = 000000000000000000000000010010--
+        when "010110" =>
+          -- w_addr = 000000000000000000000000010110--
 
           -- Write logic for block res_title_val_addr_reg_low: block containing
           -- bits 31..0 of register `res_title_val_addr_reg`
@@ -3090,8 +3150,8 @@ begin
             w_ack := true;
           end if;
 
-        when "010011" =>
-          -- w_addr = 000000000000000000000000010011--
+        when "010111" =>
+          -- w_addr = 000000000000000000000000010111--
 
           -- Write logic for block res_title_val_addr_reg_high: block containing
           -- bits 63..32 of register `res_title_val_addr_reg`
@@ -3118,8 +3178,8 @@ begin
 
           end if;
 
-        when "010100" =>
-          -- w_addr = 000000000000000000000000010100--
+        when "011000" =>
+          -- w_addr = 000000000000000000000000011000--
 
           -- Write logic for block res_match_addr_reg_low: block containing bits
           -- 31..0 of register `res_match_addr_reg` (`RES_MATCH_ADDR`).
@@ -3132,8 +3192,8 @@ begin
             w_ack := true;
           end if;
 
-        when "010101" =>
-          -- w_addr = 000000000000000000000000010101--
+        when "011001" =>
+          -- w_addr = 000000000000000000000000011001--
 
           -- Write logic for block res_match_addr_reg_high: block containing
           -- bits 63..32 of register `res_match_addr_reg` (`RES_MATCH_ADDR`).
@@ -3158,8 +3218,8 @@ begin
 
           end if;
 
-        when "010110" =>
-          -- w_addr = 000000000000000000000000010110--
+        when "011010" =>
+          -- w_addr = 000000000000000000000000011010--
 
           -- Write logic for block res_stats_addr_reg_low: block containing bits
           -- 31..0 of register `res_stats_addr_reg` (`RES_STATS_ADDR`).
@@ -3172,8 +3232,8 @@ begin
             w_ack := true;
           end if;
 
-        when "010111" =>
-          -- w_addr = 000000000000000000000000010111--
+        when "011011" =>
+          -- w_addr = 000000000000000000000000011011--
 
           -- Write logic for block res_stats_addr_reg_high: block containing
           -- bits 63..32 of register `res_stats_addr_reg` (`RES_STATS_ADDR`).
@@ -3198,8 +3258,8 @@ begin
 
           end if;
 
-        when "011000" =>
-          -- w_addr = 000000000000000000000000011000--
+        when "011100" =>
+          -- w_addr = 000000000000000000000000011100--
 
           -- Write logic for block search_data0_reg: block containing bits 31..0
           -- of register `search_data0_reg` (`SEARCH_DATA0`).
@@ -3277,8 +3337,8 @@ begin
 
           end if;
 
-        when "011001" =>
-          -- w_addr = 000000000000000000000000011001--
+        when "011101" =>
+          -- w_addr = 000000000000000000000000011101--
 
           -- Write logic for block search_data4_reg: block containing bits 31..0
           -- of register `search_data4_reg` (`SEARCH_DATA4`).
@@ -3356,8 +3416,8 @@ begin
 
           end if;
 
-        when "011010" =>
-          -- w_addr = 000000000000000000000000011010--
+        when "011110" =>
+          -- w_addr = 000000000000000000000000011110--
 
           -- Write logic for block search_data8_reg: block containing bits 31..0
           -- of register `search_data8_reg` (`SEARCH_DATA8`).
@@ -3435,8 +3495,8 @@ begin
 
           end if;
 
-        when "011011" =>
-          -- w_addr = 000000000000000000000000011011--
+        when "011111" =>
+          -- w_addr = 000000000000000000000000011111--
 
           -- Write logic for block search_data12_reg: block containing bits
           -- 31..0 of register `search_data12_reg` (`SEARCH_DATA12`).
@@ -3514,8 +3574,8 @@ begin
 
           end if;
 
-        when "011100" =>
-          -- w_addr = 000000000000000000000000011100--
+        when "100000" =>
+          -- w_addr = 000000000000000000000000100000--
 
           -- Write logic for block search_data16_reg: block containing bits
           -- 31..0 of register `search_data16_reg` (`SEARCH_DATA16`).
@@ -3593,8 +3653,8 @@ begin
 
           end if;
 
-        when "011101" =>
-          -- w_addr = 000000000000000000000000011101--
+        when "100001" =>
+          -- w_addr = 000000000000000000000000100001--
 
           -- Write logic for block search_data20_reg: block containing bits
           -- 31..0 of register `search_data20_reg` (`SEARCH_DATA20`).
@@ -3672,8 +3732,8 @@ begin
 
           end if;
 
-        when "011110" =>
-          -- w_addr = 000000000000000000000000011110--
+        when "100010" =>
+          -- w_addr = 000000000000000000000000100010--
 
           -- Write logic for block search_data24_reg: block containing bits
           -- 31..0 of register `search_data24_reg` (`SEARCH_DATA24`).
@@ -3751,8 +3811,8 @@ begin
 
           end if;
 
-        when "011111" =>
-          -- w_addr = 000000000000000000000000011111--
+        when "100011" =>
+          -- w_addr = 000000000000000000000000100011--
 
           -- Write logic for block search_data28_reg: block containing bits
           -- 31..0 of register `search_data28_reg` (`SEARCH_DATA28`).
@@ -3830,8 +3890,8 @@ begin
 
           end if;
 
-        when "100000" =>
-          -- w_addr = 000000000000000000000000100000--
+        when "100100" =>
+          -- w_addr = 000000000000000000000000100100--
 
           -- Write logic for block search_cfg: block containing bits 31..0 of
           -- register `search_cfg` (`SEARCH_CFG`).
@@ -3887,8 +3947,8 @@ begin
 
           end if;
 
-        when others => -- "100001"
-          -- w_addr = 000000000000000000000000100001--
+        when others => -- "100101"
+          -- w_addr = 000000000000000000000000100101--
 
           -- Write logic for block result_size_reg: block containing bits 31..0
           -- of register `result_size_reg` (`RESULT_SIZE`).
@@ -4013,7 +4073,7 @@ begin
       g_cmd_o.f_text_val_addr_data <= f_text_val_addr_r((0)).d;
 
       -- Post-bus logic for field group index: input dataset indices.
-      for i in 0 to 3 loop
+      for i in 0 to 4 loop
 
         -- Handle reset for field index.
         if reset = '1' then

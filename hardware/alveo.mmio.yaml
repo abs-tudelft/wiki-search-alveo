@@ -219,7 +219,7 @@ fields:
 
   - address: 0x30
     bitrange: 19..0
-    repeat: 4
+    repeat: 5
     field-repeat: 1
     brief: input dataset indices.
     doc: |
@@ -230,12 +230,13 @@ fields:
       | 0        | First index of partition 0                            |
       | 1        | Last index of partition 0, first index of partition 1 |
       | 2        | Last index of partition 1, first index of partition 2 |
-      | 3        | Last index of partition 2                             |
+      | 3        | Last index of partition 2, first index of partition 3 |
+      | 4        | Last index of partition 3                             |
     name: index
     behavior: control
     group: cmd
 
-  - address: 0x40
+  - address: 0x50
     brief: |
       Address for the matched article title offset buffer.
     name: res_title_offs_addr
@@ -243,7 +244,7 @@ fields:
     behavior: control
     group: cmd
 
-  - address: 0x48
+  - address: 0x58
     brief: |
       Address for the matched article title value buffer.
     name: res_title_val_addr
@@ -251,7 +252,7 @@ fields:
     behavior: control
     group: cmd
 
-  - address: 0x50
+  - address: 0x60
     brief: |
       Address for the match count value buffer.
     name: res_match_addr
@@ -259,7 +260,7 @@ fields:
     behavior: control
     group: cmd
 
-  - address: 0x58
+  - address: 0x68
     brief: |
       Address for the statistics buffer.
     name: res_stats_addr
@@ -267,7 +268,7 @@ fields:
     behavior: control
     group: cmd
 
-  - address: 0x60
+  - address: 0x70
     brief: |
       The word to match. The length is set by `search_first`; that is, THE WORD
       MUST BE RIGHT-ALIGNED. The character used to pad the unused bytes before
@@ -279,7 +280,7 @@ fields:
     behavior: control
     group: cfg
 
-  - address: 0x80
+  - address: 0x90
     register-name: search_cfg
     register-brief: configures how the search is performed.
     group: cfg
@@ -304,7 +305,7 @@ fields:
           Minimum number of times that the word needs to occur in the article text
           for the page to be considered to match.
 
-  - address: 0x84
+  - address: 0x94
     brief: |
       Number of matches to return. The kernel will always write this many match
       records; it'll just pad with empty title strings and 0 for the match
@@ -314,21 +315,21 @@ fields:
     behavior: control
     group: filt
 
-  - address: 0x88
+  - address: 0x98
     name: deadcode
     brief: magic number used to test MMIO access.
     doc: Always reads as 0xDEADC0DE.
     behavior: constant
     value: 0xDEADC0DE
 
-  - address: 0x8C
+  - address: 0x9C
     name: num_word_matches
     brief: |
       Number of times that the word occured in the dataset.
     behavior: status
     group: stat
 
-  - address: 0x90
+  - address: 0xA0
     name: num_page_matches
     brief: |
       Number of pages that contain the specified word at least as many times as
@@ -336,7 +337,7 @@ fields:
     behavior: status
     group: stat
 
-  - address: 0x94
+  - address: 0xA4
     bitrange: 15..0
     name: max_word_matches
     brief: |
@@ -344,7 +345,7 @@ fields:
     behavior: status
     group: stat
 
-  - address: 0x98
+  - address: 0xA8
     bitrange: 19..0
     name: max_page_idx
     brief: |
@@ -353,7 +354,7 @@ fields:
     behavior: status
     group: stat
 
-  - address: 0x9C
+  - address: 0xAC
     name: cycle_count
     brief: |
       Number of cycles taken by the last command.

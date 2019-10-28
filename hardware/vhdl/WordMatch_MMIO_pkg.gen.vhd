@@ -28,7 +28,7 @@ package WordMatch_MMIO_pkg is
   type wordmatch_mmio_g_cmd_o_type is record
     f_text_offs_addr_data : std_logic_vector(63 downto 0);
     f_text_val_addr_data : std_logic_vector(63 downto 0);
-    f_index_data : WordMatch_MMIO_f_index_data_array(0 to 3);
+    f_index_data : WordMatch_MMIO_f_index_data_array(0 to 4);
     f_res_title_offs_addr_data : std_logic_vector(63 downto 0);
     f_res_title_val_addr_data : std_logic_vector(63 downto 0);
     f_res_match_addr_data : std_logic_vector(63 downto 0);

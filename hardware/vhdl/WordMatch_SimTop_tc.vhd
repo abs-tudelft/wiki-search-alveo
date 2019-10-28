@@ -27,7 +27,7 @@ use work.UtilConv_pkg.all;
 entity WordMatch_SimTop_tc is
   generic (
     BUS_ADDR_WIDTH              : natural := 64;
-    BUS_DATA_WIDTH              : natural := 64
+    BUS_DATA_WIDTH              : natural := 128
   );
 end WordMatch_SimTop_tc;
 
@@ -249,29 +249,30 @@ begin
     mmio_write(12, X"00000000", mmio_source, mmio_sink); -- Pages first index
     mmio_write(13, X"00000001", mmio_source, mmio_sink); -- Middle index
     mmio_write(14, X"00000002", mmio_source, mmio_sink); -- Middle index
-    mmio_write(15, X"00000003", mmio_source, mmio_sink); -- Pages last index
+    mmio_write(15, X"00000002", mmio_source, mmio_sink); -- Middle index
+    mmio_write(16, X"00000003", mmio_source, mmio_sink); -- Pages last index
 
     -- Result buffer addresses.
-    mmio_write(16, X"00000000", mmio_source, mmio_sink); -- Result title_offsets
-    mmio_write(17, X"00000001", mmio_source, mmio_sink);
-    mmio_write(18, X"00000000", mmio_source, mmio_sink); -- Result title_values
-    mmio_write(19, X"00000002", mmio_source, mmio_sink);
-    mmio_write(20, X"00000000", mmio_source, mmio_sink); -- Result count_values
-    mmio_write(21, X"00000003", mmio_source, mmio_sink);
-    mmio_write(22, X"00000000", mmio_source, mmio_sink); -- Stats stats_values
-    mmio_write(23, X"00000004", mmio_source, mmio_sink);
+    mmio_write(20, X"00000000", mmio_source, mmio_sink); -- Result title_offsets
+    mmio_write(21, X"00000001", mmio_source, mmio_sink);
+    mmio_write(22, X"00000000", mmio_source, mmio_sink); -- Result title_values
+    mmio_write(23, X"00000002", mmio_source, mmio_sink);
+    mmio_write(24, X"00000000", mmio_source, mmio_sink); -- Result count_values
+    mmio_write(25, X"00000003", mmio_source, mmio_sink);
+    mmio_write(26, X"00000000", mmio_source, mmio_sink); -- Stats stats_values
+    mmio_write(27, X"00000004", mmio_source, mmio_sink);
 
     -- Configure the kernel.
-    mmio_write(24, X"00000000", mmio_source, mmio_sink); -- search data 0
-    mmio_write(25, X"00000000", mmio_source, mmio_sink); -- search data 4
-    mmio_write(26, X"00000000", mmio_source, mmio_sink); -- search data 8
-    mmio_write(27, X"00000000", mmio_source, mmio_sink); -- search data 12
-    mmio_write(28, X"00000000", mmio_source, mmio_sink); -- search data 16
-    mmio_write(29, X"00000000", mmio_source, mmio_sink); -- search data 20
-    mmio_write(30, X"00000000", mmio_source, mmio_sink); -- search data 24
-    mmio_write(31, X"656E696C", mmio_source, mmio_sink); -- search data 28
-    mmio_write(32, X"0001001c", mmio_source, mmio_sink); -- search config
-    mmio_write(33, X"00000002", mmio_source, mmio_sink); -- number of result records
+    mmio_write(28, X"00000000", mmio_source, mmio_sink); -- search data 0
+    mmio_write(29, X"00000000", mmio_source, mmio_sink); -- search data 4
+    mmio_write(30, X"00000000", mmio_source, mmio_sink); -- search data 8
+    mmio_write(31, X"00000000", mmio_source, mmio_sink); -- search data 12
+    mmio_write(31, X"00000000", mmio_source, mmio_sink); -- search data 16
+    mmio_write(33, X"00000000", mmio_source, mmio_sink); -- search data 20
+    mmio_write(34, X"00000000", mmio_source, mmio_sink); -- search data 24
+    mmio_write(35, X"656E696C", mmio_source, mmio_sink); -- search data 28
+    mmio_write(36, X"0001001c", mmio_source, mmio_sink); -- search config
+    mmio_write(37, X"00000002", mmio_source, mmio_sink); -- number of result records
 
     -- 5. Start the user core.
     mmio_write(0, X"00000001", mmio_source, mmio_sink);
@@ -291,17 +292,17 @@ begin
     end loop;
 
     -- 7. Read return register.
-    mmio_read(34, read_data, mmio_source, mmio_sink);
-    println("Magic number: " & slvToHex(read_data));
-    mmio_read(35, read_data, mmio_source, mmio_sink);
-    println("Word match count: " & slvToHex(read_data));
-    mmio_read(36, read_data, mmio_source, mmio_sink);
-    println("Page match count: " & slvToHex(read_data));
-    mmio_read(37, read_data, mmio_source, mmio_sink);
-    println("Max matches in a single article: " & slvToHex(read_data));
     mmio_read(38, read_data, mmio_source, mmio_sink);
-    println("Index of the above article: " & slvToHex(read_data));
+    println("Magic number: " & slvToHex(read_data));
     mmio_read(39, read_data, mmio_source, mmio_sink);
+    println("Word match count: " & slvToHex(read_data));
+    mmio_read(40, read_data, mmio_source, mmio_sink);
+    println("Page match count: " & slvToHex(read_data));
+    mmio_read(41, read_data, mmio_source, mmio_sink);
+    println("Max matches in a single article: " & slvToHex(read_data));
+    mmio_read(42, read_data, mmio_source, mmio_sink);
+    println("Index of the above article: " & slvToHex(read_data));
+    mmio_read(43, read_data, mmio_source, mmio_sink);
     println("Number of cycles: " & slvToHex(read_data));
 
     -- 8. Finish and stop simulation.

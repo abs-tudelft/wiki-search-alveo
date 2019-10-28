@@ -38,11 +38,11 @@ use work.WordMatch_MMIO_pkg.all;
 entity WordMatch_AxiTop is
   generic (
     BUS_ADDR_WIDTH              : natural := 64;
-    BUS_DATA_WIDTH              : natural := 64;
+    BUS_DATA_WIDTH              : natural := 128;
     BUS_LEN_WIDTH               : natural := 8;
-    BUS_READ_INNER_DATA_WIDTH   : natural := 64;
-    BUS_READ_BURST_MAX_LEN      : natural := 128;
-    BUS_READ_BURST_STEP_LEN     : natural := 8;
+    BUS_READ_INNER_DATA_WIDTH   : natural := 128;
+    BUS_READ_BURST_MAX_LEN      : natural := 64;
+    BUS_READ_BURST_STEP_LEN     : natural := 1;
     BUS_WRITE_INNER_DATA_WIDTH  : natural := 32;
     BUS_WRITE_BURST_MAX_LEN     : natural := 16;
     BUS_WRITE_BURST_STEP_LEN    : natural := 4
@@ -137,6 +137,9 @@ architecture Behavorial of WordMatch_AxiTop is
   signal mmio_starting          : std_logic;
   signal mmio_done              : std_logic;
 
+  -- Number of subkernels.
+  constant NUM_SUB              : natural := mmio_cmd.f_index_data'length - 1;
+
   -- Bus signals to convert to AXI.
   signal bus_reset_n            : std_logic;
   signal rd_mst_rreq_addr       : std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
@@ -193,29 +196,27 @@ architecture Behavorial of WordMatch_AxiTop is
   end record;
 
   -- Signal defs for the internal Fletcher busses.
-  signal pages_title_bus_req        : fletcher_read_req;
-  signal pages_title_bus_rep        : fletcher_read_rep;
-  signal pages_text_bus_req         : fletcher_read_req_array(0 to 2);
-  signal pages_text_bus_rep         : fletcher_read_rep_array(0 to 2);
+  signal read_bus_req               : fletcher_read_req_array(0 to 4);
+  signal read_bus_rep               : fletcher_read_rep_array(0 to 4);
   signal result_title_bus_req       : fletcher_write_req;
   signal result_title_bus_rep       : fletcher_write_rep;
   signal result_count_stats_bus_req : fletcher_write_req;
   signal result_count_stats_bus_rep : fletcher_write_rep;
 
   -- Page text command/unlock streams.
-  signal pages_text_cmd_valid       : std_logic_vector(2 downto 0);
-  signal pages_text_cmd_ready       : std_logic_vector(2 downto 0);
-  signal pages_text_cmd_idx         : std_logic_vector(127 downto 0);
+  signal pages_text_cmd_valid       : std_logic_vector(NUM_SUB-1 downto 0);
+  signal pages_text_cmd_ready       : std_logic_vector(NUM_SUB-1 downto 0);
+  signal pages_text_cmd_idx         : std_logic_vector(NUM_SUB*32+31 downto 0);
   signal pages_text_cmd_valuesAddr  : std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
   signal pages_text_cmd_offsetAddr  : std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
   signal pages_text_cmd_ctrl        : std_logic_vector(BUS_ADDR_WIDTH*2-1 downto 0);
-  signal pages_text_unl_valid       : std_logic_vector(2 downto 0);
-  signal pages_text_unl_ready       : std_logic_vector(2 downto 0);
+  signal pages_text_unl_valid       : std_logic_vector(NUM_SUB-1 downto 0);
+  signal pages_text_unl_ready       : std_logic_vector(NUM_SUB-1 downto 0);
 
   -- Match count streams for each of the two partitions.
-  signal match_count_part_valid     : std_logic_vector(2 downto 0);
-  signal match_count_part_ready     : std_logic_vector(2 downto 0);
-  signal match_count_part_amount    : std_logic_vector(47 downto 0);
+  signal match_count_part_valid     : std_logic_vector(NUM_SUB-1 downto 0);
+  signal match_count_part_ready     : std_logic_vector(NUM_SUB-1 downto 0);
+  signal match_count_part_amount    : std_logic_vector(NUM_SUB*16-1 downto 0);
 
   -- Arbiter'd match count stream.
   signal match_count_arb_valid      : std_logic;
@@ -462,7 +463,7 @@ begin
       BUS_ADDR_WIDTH            => BUS_ADDR_WIDTH,
       BUS_LEN_WIDTH             => BUS_LEN_WIDTH,
       BUS_DATA_WIDTH            => BUS_READ_INNER_DATA_WIDTH,
-      NUM_SLAVE_PORTS           => 4,
+      NUM_SLAVE_PORTS           => NUM_SUB + 1,
       ARB_METHOD                => "RR-STICKY",
       MAX_OUTSTANDING           => 8,
       RAM_CONFIG                => "",
@@ -484,41 +485,50 @@ begin
       mst_rdat_data             => rd_mst_rdat_data,
       mst_rdat_last             => rd_mst_rdat_last,
 
-      bs00_rreq_valid           => pages_text_bus_req(0).rreq_valid,
-      bs00_rreq_ready           => pages_text_bus_rep(0).rreq_ready,
-      bs00_rreq_addr            => pages_text_bus_req(0).rreq_addr,
-      bs00_rreq_len             => pages_text_bus_req(0).rreq_len,
-      bs00_rdat_valid           => pages_text_bus_rep(0).rdat_valid,
-      bs00_rdat_ready           => pages_text_bus_req(0).rdat_ready,
-      bs00_rdat_data            => pages_text_bus_rep(0).rdat_data,
-      bs00_rdat_last            => pages_text_bus_rep(0).rdat_last,
+      bs00_rreq_valid           => read_bus_req(0).rreq_valid,
+      bs00_rreq_ready           => read_bus_rep(0).rreq_ready,
+      bs00_rreq_addr            => read_bus_req(0).rreq_addr,
+      bs00_rreq_len             => read_bus_req(0).rreq_len,
+      bs00_rdat_valid           => read_bus_rep(0).rdat_valid,
+      bs00_rdat_ready           => read_bus_req(0).rdat_ready,
+      bs00_rdat_data            => read_bus_rep(0).rdat_data,
+      bs00_rdat_last            => read_bus_rep(0).rdat_last,
 
-      bs01_rreq_valid           => pages_text_bus_req(1).rreq_valid,
-      bs01_rreq_ready           => pages_text_bus_rep(1).rreq_ready,
-      bs01_rreq_addr            => pages_text_bus_req(1).rreq_addr,
-      bs01_rreq_len             => pages_text_bus_req(1).rreq_len,
-      bs01_rdat_valid           => pages_text_bus_rep(1).rdat_valid,
-      bs01_rdat_ready           => pages_text_bus_req(1).rdat_ready,
-      bs01_rdat_data            => pages_text_bus_rep(1).rdat_data,
-      bs01_rdat_last            => pages_text_bus_rep(1).rdat_last,
+      bs01_rreq_valid           => read_bus_req(1).rreq_valid,
+      bs01_rreq_ready           => read_bus_rep(1).rreq_ready,
+      bs01_rreq_addr            => read_bus_req(1).rreq_addr,
+      bs01_rreq_len             => read_bus_req(1).rreq_len,
+      bs01_rdat_valid           => read_bus_rep(1).rdat_valid,
+      bs01_rdat_ready           => read_bus_req(1).rdat_ready,
+      bs01_rdat_data            => read_bus_rep(1).rdat_data,
+      bs01_rdat_last            => read_bus_rep(1).rdat_last,
 
-      bs02_rreq_valid           => pages_text_bus_req(2).rreq_valid,
-      bs02_rreq_ready           => pages_text_bus_rep(2).rreq_ready,
-      bs02_rreq_addr            => pages_text_bus_req(2).rreq_addr,
-      bs02_rreq_len             => pages_text_bus_req(2).rreq_len,
-      bs02_rdat_valid           => pages_text_bus_rep(2).rdat_valid,
-      bs02_rdat_ready           => pages_text_bus_req(2).rdat_ready,
-      bs02_rdat_data            => pages_text_bus_rep(2).rdat_data,
-      bs02_rdat_last            => pages_text_bus_rep(2).rdat_last,
+      bs02_rreq_valid           => read_bus_req(2).rreq_valid,
+      bs02_rreq_ready           => read_bus_rep(2).rreq_ready,
+      bs02_rreq_addr            => read_bus_req(2).rreq_addr,
+      bs02_rreq_len             => read_bus_req(2).rreq_len,
+      bs02_rdat_valid           => read_bus_rep(2).rdat_valid,
+      bs02_rdat_ready           => read_bus_req(2).rdat_ready,
+      bs02_rdat_data            => read_bus_rep(2).rdat_data,
+      bs02_rdat_last            => read_bus_rep(2).rdat_last,
 
-      bs03_rreq_valid           => pages_title_bus_req.rreq_valid,
-      bs03_rreq_ready           => pages_title_bus_rep.rreq_ready,
-      bs03_rreq_addr            => pages_title_bus_req.rreq_addr,
-      bs03_rreq_len             => pages_title_bus_req.rreq_len,
-      bs03_rdat_valid           => pages_title_bus_rep.rdat_valid,
-      bs03_rdat_ready           => pages_title_bus_req.rdat_ready,
-      bs03_rdat_data            => pages_title_bus_rep.rdat_data,
-      bs03_rdat_last            => pages_title_bus_rep.rdat_last
+      bs03_rreq_valid           => read_bus_req(3).rreq_valid,
+      bs03_rreq_ready           => read_bus_rep(3).rreq_ready,
+      bs03_rreq_addr            => read_bus_req(3).rreq_addr,
+      bs03_rreq_len             => read_bus_req(3).rreq_len,
+      bs03_rdat_valid           => read_bus_rep(3).rdat_valid,
+      bs03_rdat_ready           => read_bus_req(3).rdat_ready,
+      bs03_rdat_data            => read_bus_rep(3).rdat_data,
+      bs03_rdat_last            => read_bus_rep(3).rdat_last,
+
+      bs04_rreq_valid           => read_bus_req(4).rreq_valid,
+      bs04_rreq_ready           => read_bus_rep(4).rreq_ready,
+      bs04_rreq_addr            => read_bus_req(4).rreq_addr,
+      bs04_rreq_len             => read_bus_req(4).rreq_len,
+      bs04_rdat_valid           => read_bus_rep(4).rdat_valid,
+      bs04_rdat_ready           => read_bus_req(4).rdat_ready,
+      bs04_rdat_data            => read_bus_rep(4).rdat_data,
+      bs04_rdat_last            => read_bus_rep(4).rdat_last
     );
 
   write_arbiter_inst : entity work.BusWriteArbiter
@@ -575,7 +585,7 @@ begin
   -----------------------------------------------------------------------------
   pages_text_cmd_ctrl <= pages_text_cmd_valuesAddr & pages_text_cmd_offsetAddr;
 
-  text_read_gen: for i in 0 to 2 generate
+  text_read_gen: for i in 0 to NUM_SUB - 1 generate
 
     -- Article text length stream. This stream is actually unused.
     signal pages_text_valid         : std_logic;
@@ -622,14 +632,14 @@ begin
         kcd_clk                 => dec_clk,
         kcd_reset               => dec_reset,
 
-        bus_rreq_valid          => pages_text_bus_req(i).rreq_valid,
-        bus_rreq_ready          => pages_text_bus_rep(i).rreq_ready,
-        bus_rreq_addr           => pages_text_bus_req(i).rreq_addr,
-        bus_rreq_len            => pages_text_bus_req(i).rreq_len,
-        bus_rdat_valid          => pages_text_bus_rep(i).rdat_valid,
-        bus_rdat_ready          => pages_text_bus_req(i).rdat_ready,
-        bus_rdat_data           => pages_text_bus_rep(i).rdat_data,
-        bus_rdat_last           => pages_text_bus_rep(i).rdat_last,
+        bus_rreq_valid          => read_bus_req(i+1).rreq_valid,
+        bus_rreq_ready          => read_bus_rep(i+1).rreq_ready,
+        bus_rreq_addr           => read_bus_req(i+1).rreq_addr,
+        bus_rreq_len            => read_bus_req(i+1).rreq_len,
+        bus_rdat_valid          => read_bus_rep(i+1).rdat_valid,
+        bus_rdat_ready          => read_bus_req(i+1).rdat_ready,
+        bus_rdat_data           => read_bus_rep(i+1).rdat_data,
+        bus_rdat_last           => read_bus_rep(i+1).rdat_last,
 
         cmd_valid               => pages_text_cmd_valid(i),
         cmd_ready               => pages_text_cmd_ready(i),
@@ -704,7 +714,7 @@ begin
   -- Combine the three match streams into one.
   match_count_arb_inst: entity work.StreamArb
     generic map (
-      NUM_INPUTS                => 3,
+      NUM_INPUTS                => NUM_SUB,
       INDEX_WIDTH               => 2,
       DATA_WIDTH                => 16
     )
@@ -767,14 +777,14 @@ begin
       kcd_clk                   => bus_clk,
       kcd_reset                 => bus_reset,
 
-      bus_rreq_valid            => pages_title_bus_req.rreq_valid,
-      bus_rreq_ready            => pages_title_bus_rep.rreq_ready,
-      bus_rreq_addr             => pages_title_bus_req.rreq_addr,
-      bus_rreq_len              => pages_title_bus_req.rreq_len,
-      bus_rdat_valid            => pages_title_bus_rep.rdat_valid,
-      bus_rdat_ready            => pages_title_bus_req.rdat_ready,
-      bus_rdat_data             => pages_title_bus_rep.rdat_data,
-      bus_rdat_last             => pages_title_bus_rep.rdat_last,
+      bus_rreq_valid            => read_bus_req(0).rreq_valid,
+      bus_rreq_ready            => read_bus_rep(0).rreq_ready,
+      bus_rreq_addr             => read_bus_req(0).rreq_addr,
+      bus_rreq_len              => read_bus_req(0).rreq_len,
+      bus_rdat_valid            => read_bus_rep(0).rdat_valid,
+      bus_rdat_ready            => read_bus_req(0).rdat_ready,
+      bus_rdat_data             => read_bus_rep(0).rdat_data,
+      bus_rdat_last             => read_bus_rep(0).rdat_last,
 
       cmd_valid                 => pages_title_cmd_valid,
       cmd_ready                 => pages_title_cmd_ready,
@@ -905,7 +915,8 @@ begin
   -----------------------------------------------------------------------------
   cmd_gen_inst: entity work.WordMatch_CmdGen
     generic map (
-      BUS_ADDR_WIDTH            => BUS_ADDR_WIDTH
+      BUS_ADDR_WIDTH            => BUS_ADDR_WIDTH,
+      NUM_SUB                   => NUM_SUB
     )
     port map (
       clk                       => bus_clk,

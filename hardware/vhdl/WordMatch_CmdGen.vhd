@@ -8,7 +8,8 @@ use work.WordMatch_MMIO_pkg.all;
 
 entity WordMatch_CmdGen is
   generic (
-    BUS_ADDR_WIDTH              : integer := 64
+    BUS_ADDR_WIDTH              : integer := 64;
+    NUM_SUB                     : natural
   );
   port (
     clk                         : in  std_logic;
@@ -21,13 +22,13 @@ entity WordMatch_CmdGen is
     mmio_done                   : out std_logic;
 
     -- Page text command/unlock streams.
-    pages_text_cmd_valid        : out std_logic_vector(2 downto 0);
-    pages_text_cmd_ready        : in  std_logic_vector(2 downto 0);
-    pages_text_cmd_idx          : out std_logic_vector(127 downto 0);
+    pages_text_cmd_valid        : out std_logic_vector(NUM_SUB-1 downto 0);
+    pages_text_cmd_ready        : in  std_logic_vector(NUM_SUB-1 downto 0);
+    pages_text_cmd_idx          : out std_logic_vector(NUM_SUB*32+31 downto 0);
     pages_text_cmd_valuesAddr   : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
     pages_text_cmd_offsetAddr   : out std_logic_vector(BUS_ADDR_WIDTH-1 downto 0);
-    pages_text_unl_valid        : in  std_logic_vector(2 downto 0);
-    pages_text_unl_ready        : out std_logic_vector(2 downto 0);
+    pages_text_unl_valid        : in  std_logic_vector(NUM_SUB-1 downto 0);
+    pages_text_unl_ready        : out std_logic_vector(NUM_SUB-1 downto 0);
 
     -- Match count input stream from decompression/match datapath.
     match_count_in_valid        : in  std_logic;
@@ -72,8 +73,8 @@ begin
   proc: process (clk) is
 
     -- Command stream state variables.
-    variable ptc_valid_v  : std_logic_vector(2 downto 0) := "000";
-    variable ptu_wait_v   : std_logic_vector(2 downto 0) := "000";
+    variable ptc_valid_v  : std_logic_vector(NUM_SUB-1 downto 0) := (others => '0');
+    variable ptu_wait_v   : std_logic_vector(NUM_SUB-1 downto 0) := (others => '0');
     variable rtc_valid_v  : std_logic := '0';
     variable rtu_wait_v   : std_logic := '0';
     variable rcsc_valid_v : std_logic := '0';
@@ -84,7 +85,7 @@ begin
 
     -- Match stream state variables.
     type index_array is array (natural range <>) of unsigned(19 downto 0);
-    variable mc_indices   : index_array(0 to 2) := (others => (others => '0'));
+    variable mc_indices   : index_array(0 to NUM_SUB-1) := (others => (others => '0'));
     variable mc_remain    : unsigned(20 downto 0) := (others => '0');
     variable mci_valid    : std_logic := '0';
     variable mci_amount   : std_logic_vector(15 downto 0);
@@ -105,10 +106,11 @@ begin
       mmio_starting <= '0';
 
       -- Compute whether we're busy.
-      busy_v := ptc_valid_v(0) or ptc_valid_v(1) or ptc_valid_v(2)
-             or ptu_wait_v(0) or ptu_wait_v(1) or ptu_wait_v(2)
-             or rtc_valid_v or rtu_wait_v or rcsc_valid_v or rcsu_wait_v
+      busy_v := rtc_valid_v or rtu_wait_v or rcsc_valid_v or rcsu_wait_v
              or send_stat_v or write_busy;
+      for sub in 0 to NUM_SUB - 1 loop
+        busy_v := busy_v or ptc_valid_v(sub) or ptu_wait_v(sub);
+      end loop;
 
       -- There might be latency between the last writer unlocking (busy_v
       -- going low) and the last write even appearing at the periphery of the
@@ -150,20 +152,26 @@ begin
       if busy_v = '0' and mmio_start = '1' then
 
         -- Send compressed article text input command.
-        pages_text_cmd_idx(31 downto 0)   <= std_logic_vector(resize(unsigned(mmio_cmd.f_index_data(0)), 32));
-        pages_text_cmd_idx(63 downto 32)  <= std_logic_vector(resize(unsigned(mmio_cmd.f_index_data(1)), 32));
-        pages_text_cmd_idx(95 downto 64)  <= std_logic_vector(resize(unsigned(mmio_cmd.f_index_data(2)), 32));
-        pages_text_cmd_idx(127 downto 96) <= std_logic_vector(resize(unsigned(mmio_cmd.f_index_data(3)), 32));
+        for idx in 0 to NUM_SUB loop
+          pages_text_cmd_idx(idx*32+31 downto idx*32) <= std_logic_vector(resize(unsigned(mmio_cmd.f_index_data(idx)), 32));
+        end loop;
         pages_text_cmd_valuesAddr <= std_logic_vector(resize(unsigned(mmio_cmd.f_text_val_addr_data), BUS_ADDR_WIDTH));
         pages_text_cmd_offsetAddr <= std_logic_vector(resize(unsigned(mmio_cmd.f_text_offs_addr_data), BUS_ADDR_WIDTH));
-        ptc_valid_v := "111";
-        ptu_wait_v := "111";
+        for sub in 0 to NUM_SUB - 1 loop
+          if mmio_cmd.f_index_data(sub) = mmio_cmd.f_index_data(sub + 1) then
+            ptc_valid_v(sub) := '0';
+            ptu_wait_v(sub) := '0';
+          else
+            ptc_valid_v(sub) := '1';
+            ptu_wait_v(sub) := '1';
+          end if;
+        end loop;
 
         -- Initialize the match stream index counters.
-        mc_indices(0) := unsigned(mmio_cmd.f_index_data(0));
-        mc_indices(1) := unsigned(mmio_cmd.f_index_data(1));
-        mc_indices(2) := unsigned(mmio_cmd.f_index_data(2));
-        mc_remain := resize(unsigned(mmio_cmd.f_index_data(3)), 21)
+        for sub in 0 to NUM_SUB - 1 loop
+          mc_indices(sub) := unsigned(mmio_cmd.f_index_data(sub));
+        end loop;
+        mc_remain := resize(unsigned(mmio_cmd.f_index_data(NUM_SUB)), 21)
                    - resize(unsigned(mmio_cmd.f_index_data(0)), 21)
                    - 2;
 
@@ -213,25 +221,20 @@ begin
         mci_valid := '0';
         mco_valid := '1';
         mco_amount := mci_amount;
-        case mci_part is
-          when "00" =>
-            mco_index := std_logic_vector(mc_indices(0));
-            mc_indices(0) := mc_indices(0) + 1;
-          when "01" =>
-            mco_index := std_logic_vector(mc_indices(1));
-            mc_indices(1) := mc_indices(1) + 1;
-          when others =>
-            mco_index := std_logic_vector(mc_indices(2));
-            mc_indices(2) := mc_indices(2) + 1;
-        end case;
+        for sub in 0 to NUM_SUB - 1 loop
+          if to_integer(unsigned(mci_part)) = sub then
+            mco_index := std_logic_vector(mc_indices(sub));
+            mc_indices(sub) := mc_indices(sub) + 1;
+          end if;
+        end loop;
         mco_last := mc_remain(20);
         mc_remain := mc_remain - 1;
       end if;
 
       -- Handle reset.
       if reset = '1' then
-        ptc_valid_v   := "000";
-        ptu_wait_v    := "000";
+        ptc_valid_v   := (others => '0');
+        ptu_wait_v    := (others => '0');
         rtc_valid_v   := '0';
         rtu_wait_v    := '0';
         rcsc_valid_v  := '0';
