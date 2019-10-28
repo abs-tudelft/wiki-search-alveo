@@ -245,6 +245,9 @@
             </p>
           </v-col>
         </v-row>
+        <v-row justify="center">
+          <img src="../assets/stack.svg" height="200px" cols="auto" style="margin-bottom: 50px"/>
+        </v-row>
       </v-container>
 
       <v-container v-if="response || loading">
