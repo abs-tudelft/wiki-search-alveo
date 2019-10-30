@@ -214,8 +214,8 @@
               </v-col>
               <v-spacer></v-spacer>
               <v-col align="center" justify="center" no-gutters>
-                <!--<img src="../assets/fletcher-logo.png" height="60px" cols="auto" />-->
-                <img src="../assets/fletcher-old-logo.png" height="60px" cols="auto" />
+                <img src="../assets/fletcher-logo.png" height="60px" cols="auto" />
+                <!-- <img src="../assets/fletcher-old-logo.png" height="60px" cols="auto" /> -->
                 <!--<img src="https://repository-images.githubusercontent.com/120948886/c0dcc400-80aa-11e9-8a51-c7ff5364fe0a" height="60px" cols="auto" />-->
               </v-col>
               <v-spacer></v-spacer>
@@ -532,8 +532,8 @@
           </v-col>
           <v-spacer></v-spacer>
           <v-col align="center" justify="center">
-            <!--<img src="../assets/fletcher-logo.png" height="50px" cols="auto" />-->
-            <img src="../assets/fletcher-old-logo.png" height="50px" cols="auto" />
+            <img src="../assets/fletcher-logo.png" height="50px" cols="auto" />
+            <!-- <img src="../assets/fletcher-old-logo.png" height="50px" cols="auto" /> -->
             <!--<img src="https://repository-images.githubusercontent.com/120948886/c0dcc400-80aa-11e9-8a51-c7ff5364fe0a" height="50px" cols="auto" />-->
           </v-col>
           <v-spacer></v-spacer>
