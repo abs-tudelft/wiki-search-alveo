@@ -138,18 +138,8 @@ object WikipediaArrowSnappy {
       .sort($"title")
       .repartition(partitions)
       .sortWithinPartitions($"title")
-      // .take(1000)
-      // .foreach(println)
       .foreachPartition { partition =>
         {
-          // val schema = StructType(
-          //   Array(
-          //     StructField("title", StringType, false),
-          //     StructField("text", BinaryType, false)
-          //   )
-          // )
-          // val autoSchema = ArrowUtils.toArrowSchema(schema, null)
-          // val arrowSchema = org.apache.arrow.vector.types.pojo.Schema(autoSchema.getFields(), Map("fletcher_"))
           val titleField = new FieldType(false, new ArrowType.Utf8(), null)
           val textField = new FieldType(
             false,

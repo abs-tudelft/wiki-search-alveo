@@ -1,27 +1,20 @@
 #[macro_use]
 extern crate lazy_static;
 
+use crypto::{digest::Digest, sha1::Sha1};
 use serde::{Deserialize, Serialize};
 use std::{
-    ffi::{CStr, CString},
     collections::HashMap,
-    slice::from_raw_parts,
-    path::Path,
+    ffi::{CStr, CString},
     fs::File,
     io::{Read, Write},
+    ops::{Deref, DerefMut},
+    path::Path,
+    slice::from_raw_parts,
     sync::Mutex,
-    ops::{DerefMut, Deref},
 };
-use warp::{
-    self,
-    http::Response,
-    Filter,
-};
+use warp::{self, http::Response, Filter};
 use wrapper::*;
-use crypto::{
-    sha1::Sha1,
-    digest::Digest,
-};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct QueryParameters {
@@ -102,10 +95,22 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
     // Complete query by substituting default values.
     let query = CompletedQueryParameters {
         pattern: query.pattern,
-        whole_words: if let Some(x) = query.whole_words { x } else { false },
-        min_matches: if let Some(x) = query.min_matches { x } else { 1 },
+        whole_words: if let Some(x) = query.whole_words {
+            x
+        } else {
+            false
+        },
+        min_matches: if let Some(x) = query.min_matches {
+            x
+        } else {
+            1
+        },
         mode: if let Some(x) = query.mode { x } else { 0 },
-        wiki: if let Some(x) = query.wiki { x } else { "en".to_string() },
+        wiki: if let Some(x) = query.wiki {
+            x
+        } else {
+            "en".to_string()
+        },
     };
 
     // Check query validity.
@@ -117,13 +122,15 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
     let pattern = CString::new(query.pattern.as_str()).unwrap();
     let mut config = WordMatchRunConfig {
         pattern: pattern.as_ptr(),
-        whole_words: if query.whole_words {1} else {0},
+        whole_words: if query.whole_words { 1 } else { 0 },
         min_matches: query.min_matches,
         mode: query.mode,
     };
 
     // Run the kernel.
-    let result = unsafe { word_match_run(&mut config, Some(ffi_update_status), std::ptr::null_mut()).as_ref() };
+    let result = unsafe {
+        word_match_run(&mut config, Some(ffi_update_status), std::ptr::null_mut()).as_ref()
+    };
     update_status("Ready");
     let retval = if result.is_none() {
         Err(warp::reject::custom(get_last_error()))
@@ -138,8 +145,10 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
         let mut input_size = 0u64;
 
         let mut results = HashMap::new();
-        for partial in unsafe {from_raw_parts(result.partial_results, result.num_partial_results as usize)} {
-            let partial = unsafe {**partial};
+        for partial in
+            unsafe { from_raw_parts(result.partial_results, result.num_partial_results as usize) }
+        {
+            let partial = unsafe { **partial };
 
             // Always add the page with the most matches.
             if partial.max_word_matches >= query.min_matches {
@@ -149,7 +158,7 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
                             .to_string_lossy()
                             .to_string()
                     },
-                    partial.max_word_matches
+                    partial.max_word_matches,
                 );
             }
 
@@ -160,25 +169,13 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
                     .to_string_lossy()
                     .to_string()
             };
-            let title_offsets = unsafe {
-                from_raw_parts(
-                    partial.page_match_title_offsets,
-                    num_records + 1
-                )
-            };
-            let match_counts = unsafe {
-                from_raw_parts(
-                    partial.page_match_counts,
-                    num_records
-                )
-            };
+            let title_offsets =
+                unsafe { from_raw_parts(partial.page_match_title_offsets, num_records + 1) };
+            let match_counts = unsafe { from_raw_parts(partial.page_match_counts, num_records) };
             for i in 0..num_records as usize {
                 let start = title_offsets[i] as usize;
                 let stop = title_offsets[i + 1] as usize;
-                results.insert(
-                    title_values[start..stop].to_string(),
-                    match_counts[i]
-                );
+                results.insert(title_values[start..stop].to_string(), match_counts[i]);
             }
 
             // Check if there were more matches in this chunk than there was room for.
@@ -188,7 +185,6 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
 
             // Accumulate input size.
             input_size += partial.data_size as u64;
-
         }
 
         // Sort the results.
@@ -222,7 +218,10 @@ fn go_query(query: QueryParameters) -> Result<impl warp::Reply, warp::Rejection>
                 num_result_records,
                 input_size,
                 time_taken_ms: result.time_taken / 1000,
-                bandwidth: format!("{:.2} GB/s", ((input_size as f32) / (result.time_taken as f32)) / 1000f32),
+                bandwidth: format!(
+                    "{:.2} GB/s",
+                    ((input_size as f32) / (result.time_taken as f32)) / 1000f32
+                ),
             },
             top_result,
             top_ten_results,
@@ -269,7 +268,7 @@ fn fetch_wiki_img(query: WikiImageParameters) -> Result<WikiImageCacheRecord, wa
                 .ok_or_else(|| warp::reject::custom("Bad pages map"))?
                 .keys()
                 .next()
-                .ok_or_else(|| warp::reject::custom("No page"))?
+                .ok_or_else(|| warp::reject::custom("No page"))?,
         )
         .unwrap()
         .get("thumbnail")
@@ -286,7 +285,9 @@ fn fetch_wiki_img(query: WikiImageParameters) -> Result<WikiImageCacheRecord, wa
     };
     img.copy_to(&mut record.data).unwrap();
     for (key, value) in img.headers() {
-        record.headers.push((key.to_string(), value.to_str().unwrap().to_string()));
+        record
+            .headers
+            .push((key.to_string(), value.to_str().unwrap().to_string()));
     }
     Ok(record)
 }
@@ -302,14 +303,14 @@ fn get_wiki_img(query: WikiImageParameters) -> Result<impl warp::Reply, warp::Re
     let path = Path::new("./cache").join(hasher.result_str());
 
     let record: WikiImageCacheRecord = if path.exists() {
-
         // Read from cache.
         let mut buf = vec![];
-        File::open(path).expect("Failed to open cached image").read_to_end(&mut buf).expect("Failed to read cached image");
+        File::open(path)
+            .expect("Failed to open cached image")
+            .read_to_end(&mut buf)
+            .expect("Failed to read cached image");
         bincode::deserialize(&buf).unwrap()
-
     } else {
-
         // Fetch from Wikipedia.
         let response = fetch_wiki_img(query);
         let record = if let Ok(record) = response {
@@ -323,7 +324,10 @@ fn get_wiki_img(query: WikiImageParameters) -> Result<impl warp::Reply, warp::Re
 
         // Update the cache.
         let buf: Vec<u8> = bincode::serialize(&record).unwrap();
-        File::create(path).expect("Failed to create cached image").write_all(&buf).expect("Failed to write cached image");
+        File::create(path)
+            .expect("Failed to create cached image")
+            .write_all(&buf)
+            .expect("Failed to write cached image");
 
         record
     };
@@ -365,12 +369,13 @@ extern "C" fn ffi_update_status(
 
 fn get_last_error() -> String {
     unsafe {
-        return CStr::from_ptr(word_match_last_error()).to_string_lossy().to_string();
+        return CStr::from_ptr(word_match_last_error())
+            .to_string_lossy()
+            .to_string();
     };
 }
 
 fn main() -> Result<(), ()> {
-
     // Serve client files
     // TODO(mb): serve at /static?
     let client = warp::fs::dir("../client/dist");
@@ -388,18 +393,16 @@ fn main() -> Result<(), ()> {
         .and_then(get_wiki_img);
 
     // Status query endpoint
-    let status = warp::get2()
-        .and(warp::path("status"))
-        .and_then(get_status);
+    let status = warp::get2().and(warp::path("status")).and_then(get_status);
 
     // Construct
     let api = query.or(wiki_img).or(client).or(status);
 
     // Host application configuration setup
-//     let data_prefix = CString::new("/work/shared/fletcher-alveo/enwiki-no-meta").unwrap();
-    let xclbin_prefix = CString::new("../alveo/xclbin/word_match").unwrap();
-    let data_prefix = CString::new("/work/shared/fletcher-alveo/simplewiki").unwrap();
-//     let xclbin_prefix = CString::new("").unwrap();
+    let data_prefix = CString::new("/work/shared/fletcher-alveo/enwiki-no-meta").unwrap();
+    let xclbin_prefix =
+        CString::new("/work/shared/fletcher-alveo/fletcher-alveo-demo/alveo/xclbin/word_match")
+            .unwrap();
     let emu_mode = CString::new("hw").unwrap();
     let kernel_name = CString::new("krnl_word_match_rtl").unwrap();
 
@@ -413,7 +416,14 @@ fn main() -> Result<(), ()> {
     };
 
     // Initialize
-    let test_fpga = unsafe { word_match_init(&mut test_config, 0i32, Some(ffi_update_status), std::ptr::null_mut()) };
+    let test_fpga = unsafe {
+        word_match_init(
+            &mut test_config,
+            0i32,
+            Some(ffi_update_status),
+            std::ptr::null_mut(),
+        )
+    };
     if test_fpga == 0 {
         eprintln!("Init failed: {}", get_last_error());
         unsafe { word_match_release() };
