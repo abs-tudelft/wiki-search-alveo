@@ -3,6 +3,9 @@ import org.xerial.snappy.Snappy
 import collection.JavaConverters._
 import java.io._
 
+import org.apache.log4j.Logger
+import org.apache.log4j.Level
+
 import org.apache.arrow.memory._
 import org.apache.arrow.vector._
 import org.apache.arrow.vector.ipc._
@@ -29,12 +32,19 @@ object WikipediaArrowSnappy {
     val output = args(1)
 
     // number of partitions
-    // val partitions = args(2).toInt
+    val partitions = args(2).toInt
+
+    // limit rows
+    val limit = args(3).toInt
 
     val spark = SparkSession.builder
       .appName("Wikipedia to Arrow with Snappy")
+      .config("arrow.memory.debug.allocator", true)
       .getOrCreate
+
     import spark.implicits._
+
+    // Logger.getLogger("org").setLevel(Level.DEBUG)
 
     val wikiSchema = StructType(
       Array(
@@ -105,40 +115,50 @@ object WikipediaArrowSnappy {
       Snappy.compress(x.getBytes("UTF-8"))
     val snappy = udf(compress)
 
-    val schema = StructType(
-      Array(
-        StructField("title", StringType, false),
-        StructField("text", BinaryType, false)
-      )
-    )
-
-    spark
-      .createDataFrame(
-        spark.read
-          .schema(wikiSchema)
-          .option("rowTag", "page")
-          .option("mode", "DROPMALFORMED")
-          .xml(input)
-          .select($"title", $"revision.text._VALUE".as("text"))
-          .na
-          .drop
-          .select(
-            $"title",
-            snappy(
-              regexp_replace(
-                regexp_replace($"text", replace, "$1"),
-                replace,
-                "$1"
-              )
-            )
+    spark.read
+      .schema(wikiSchema)
+      .option("rowTag", "page")
+      .option("mode", "DROPMALFORMED")
+      .xml(input)
+      .select($"title", $"revision.text._VALUE".as("text"))
+      .na
+      .drop
+      .filter(not($"title".rlike("[A-Za-z_0-9]+:[^ ].*")))
+      .select(
+        $"title",
+        snappy(
+          regexp_replace(
+            regexp_replace($"text", replace, "$1"),
+            replace,
+            "$1"
           )
-          .rdd,
-        schema
+        )
       )
-      // .coalesce(partitions)
+      // .limit(limit)
+      .sort($"title")
+      .repartition(partitions)
+      .sortWithinPartitions($"title")
       .foreachPartition { partition =>
         {
-          val writer = execution.arrow.ArrowWriter.create(schema, null)
+          val titleField = new FieldType(false, new ArrowType.Utf8(), null)
+          val textField = new FieldType(
+            false,
+            new ArrowType.Binary(),
+            null,
+            Map("fletcher_epc" -> "8").asJava
+          )
+          val arrowSchema = new Schema(
+            Iterable(
+              new Field("title", titleField, null),
+              new Field("text", textField, null)
+            ).asJava,
+            Map(
+              "fletcher_mode" -> "read",
+              "fletcher_name" -> "Pages"
+            ).asJava
+          )
+          val root = VectorSchemaRoot.create(arrowSchema, ArrowUtils.rootAllocator)
+          val writer = execution.arrow.ArrowWriter.create(root)
           partition.foreach { row =>
             {
               writer.write(
@@ -154,12 +174,12 @@ object WikipediaArrowSnappy {
             output + "-" + TaskContext.getPartitionId + ".rb"
           )
           val fileWriter =
-            new ArrowFileWriter(writer.root, null, outputStream.getChannel())
+            new ArrowFileWriter(root, null, outputStream.getChannel())
           fileWriter.start
           fileWriter.writeBatch
           fileWriter.end
 
-          writer.root.close
+          root.close
         }
       }
 

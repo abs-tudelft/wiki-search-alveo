@@ -13,3 +13,4 @@ emconfig.json
 *.wcfg
 *.wdb
 /xsim.dir/
+/*.so

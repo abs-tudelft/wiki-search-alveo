@@ -1,5 +1,9 @@
 
 #include "alveo.hpp"
+#include "xbutil.hpp"
+#include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 
 AlveoKernelInstance::AlveoKernelInstance(cl_device_id device, cl_program program, const std::string &kernel_name) : device(device) {
 
@@ -36,7 +40,7 @@ AlveoKernelInstance::~AlveoKernelInstance() {
     clReleaseContext(context);
 }
 
-AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &kernel_name) {
+AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &kernel_name, bool quiet) {
 
     // Enumerate platforms.
     cl_platform_id platforms[16];
@@ -69,7 +73,7 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
     if (err != CL_SUCCESS) {
         throw std::runtime_error("clGetPlatformInfo(name) failed");
     }
-    printf("Platform:\n  Vendor: Xilinx\n  Name: %s\n", param);
+    if (!quiet) printf("Platform:\n  Vendor: Xilinx\n  Name: %s\n", param);
 
     // Enumerate devices in platform.
     cl_device_id devices[16];  // compute device id
@@ -91,15 +95,15 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
         if (err != CL_SUCCESS) {
             throw std::runtime_error("clGetDeviceInfo(name) failed");
         }
-        printf("  Device %u: %s", i, param);
+        if (!quiet) printf("  Device %u: %s", i, param);
         if (device == NULL) {
             xclbin_fname = bin_prefix + "." + param + ".xclbin";
             if (device == NULL && access(xclbin_fname.c_str(), F_OK) != -1) {
-                printf(" <--");
+                if (!quiet) printf(" <--");
                 device = devices[i];
             }
         }
-        printf("\n");
+        if (!quiet) printf("\n");
     }
     if (device == NULL) {
         throw std::runtime_error("no accelerator with corresponding xclbin found");
@@ -112,7 +116,7 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
     }
 
     // Load the binary.
-    printf("\nLoading binary %s... ", xclbin_fname.c_str());
+    if (!quiet) printf("\nLoading binary %s... ", xclbin_fname.c_str());
     fflush(stdout);
     MmapFile xclbin(xclbin_fname);
     const size_t size = xclbin.size();
@@ -129,7 +133,7 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
         clReleaseContext(context);
         throw std::runtime_error("clBuildProgram() failed");
     }
-    printf("done\n");
+    if (!quiet) printf("done\n");
 
     // Create a command queue.
     queue = clCreateCommandQueue(
@@ -164,8 +168,14 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
         instances.push_back(std::make_shared<AlveoKernelInstance>(
             subdevices[i], program, kernel_name));
     }
-    printf("Found %u kernel instances.\n\n", num_subdevices);
+    if (!quiet) printf("Found %u kernel instances.\n\n", num_subdevices);
 
+    // Query the frequencies.
+    XBUtilDumpInfo info;
+    xbutil_dump(info);
+    clock0 = info.clock0;
+    clock1 = info.clock1;
+    if (!quiet) printf("Frequencies are %.0f MHz (clock 0 & bus) and %.0f MHz (clock 1).\n\n", clock0, clock1);
 }
 
 AlveoContext::~AlveoContext() {
@@ -353,12 +363,20 @@ std::shared_ptr<AlveoEvents> AlveoBuffer::write(const void *data) {
 /**
  * Synchronously reads data from the buffer.
  */
-void AlveoBuffer::read(void *data) {
+void AlveoBuffer::read(void *data, size_t offset, ssize_t size) {
     if (fake_host_ptr != NULL) {
         throw std::runtime_error("cannot read from buffer, host ptr is fake");
     }
+    size_t read_size = this->size;
+    if (size >= 0) read_size = (size_t)size;
+    if (read_size + offset > this->size) {
+        throw std::runtime_error("offset + size out of range");
+    }
+    if (!read_size) {
+        return;
+    }
     cl_int err = clEnqueueReadBuffer(
-        context.queue, buffer, CL_TRUE, 0, size, data, 0, NULL, NULL);
+        context.queue, buffer, CL_TRUE, offset, read_size, data, 0, NULL, NULL);
     if (err != CL_SUCCESS) {
         throw std::runtime_error("clEnqueueReadBuffer() failed");
     }

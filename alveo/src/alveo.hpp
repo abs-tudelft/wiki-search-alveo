@@ -2,18 +2,8 @@
 
 #include "utils.hpp"
 #include "xcl2.hpp"
-#include <stdio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <inttypes.h>
 #include <string>
 #include <memory>
-#include <arrow/api.h>
-#include <arrow/io/api.h>
-#include <arrow/ipc/api.h>
 
 /**
  * Manages a kernel instance and its associated OpenCL (sub)context and queue.
@@ -50,9 +40,11 @@ public:
     cl_program program;
     cl_command_queue queue;
     std::vector<std::shared_ptr<AlveoKernelInstance>> instances;
+    float clock0;
+    float clock1;
 
     AlveoContext(const AlveoContext&) = delete;
-    AlveoContext(const std::string &bin_prefix, const std::string &kernel_name);
+    AlveoContext(const std::string &bin_prefix, const std::string &kernel_name, bool quiet = false);
     ~AlveoContext();
 
 };
@@ -136,7 +128,7 @@ public:
     /**
      * Synchronously reads data from the buffer.
      */
-    void read(void *data);
+    void read(void *data, size_t offset=0, ssize_t size=-1);
 
     /**
      * Returns the size of the buffer.

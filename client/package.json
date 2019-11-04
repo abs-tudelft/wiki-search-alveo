@@ -1,0 +1,27 @@
+{
+  "name": "client",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "parcel src/index.html",
+    "build": "parcel build src/index.html",
+    "format": "prettier --write 'src/**/*'"
+  },
+  "devDependencies": {
+    "@mdi/js": "^4.5.95",
+    "@vue/component-compiler-utils": "^3.0.0",
+    "deepmerge": "^4.1.1",
+    "fibers": "^4.0.1",
+    "parcel-bundler": "^1.12.4",
+    "prettier": "^1.18.2",
+    "sass": "^1.23.0",
+    "sass-loader": "^8.0.0",
+    "typescript": "^3.6.4",
+    "vue-template-compiler": "^2.6.10"
+  },
+  "dependencies": {
+    "@mdi/font": "^4.5.95",
+    "vue": "^2.6.10",
+    "vue-hot-reload-api": "^2.3.4",
+    "vuetify": "^2.1.4"
+  }
+}

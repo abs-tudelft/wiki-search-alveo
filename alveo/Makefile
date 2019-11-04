@@ -30,7 +30,11 @@ BUILD_DIR := ./_x.$(TARGET).$(DSA)
 
 BUILD_DIR_word_match = $(BUILD_DIR)/word_match
 
-CXX := $(XILINX_SDX)/bin/xcpp
+# To make sure that the Rust-based server and this library are linked against
+# the same runtime, we use the system g++ compiler. This doesn't seem to break
+# anything here.
+CXX := g++
+#CXX := $(XILINX_SDX)/bin/7
 XOCC := $(XILINX_SDX)/bin/xocc
 
 # Definition of include file locations
@@ -60,11 +64,16 @@ arrow_CXXFLAGS=$(shell pkg-config --cflags arrow) -D_GLIBCXX_USE_CXX11_ABI=0
 CXXFLAGS += $(arrow_CXXFLAGS)
 LDFLAGS += $(arrow_LDFLAGS)
 
-CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++14
+LDFLAGS += -lsnappy
+
+CXXFLAGS += $(opencl_CXXFLAGS) -Wall -std=c++14
 LDFLAGS += $(opencl_LDFLAGS)
 
-HOST_SRCS += src/alveo.cpp src/utils.cpp src/host.cpp
-HOST_HDRS += src/alveo.hpp src/utils.hpp
+#CXXFLAGS += -O0 -g
+CXXFLAGS += -O3
+
+HOST_SRCS += src/alveo.cpp src/utils.cpp src/word_match.cpp src/hardware.cpp src/software.cpp src/xbutil.cpp src/ffi.cpp
+HOST_HDRS += src/alveo.hpp src/utils.hpp src/word_match.hpp src/hardware.hpp src/software.hpp src/xbutil.hpp src/ffi.h
 CXXFLAGS += -Isrc
 
 # Host compiler global settings
@@ -119,7 +128,8 @@ $(XCLBIN)/word_match.$(TARGET).$(DSA).xclbin: $(BINARY_CONTAINER_word_match_OBJS
 		--kernel_frequency '0:300|1:200'
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
-	$(CXX) $(CXXFLAGS) $(HOST_SRCS) -o '$@' $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) src/host.cpp -L . -lwordmatch -Wl,-rpath,. -o '$@' $(LDFLAGS)
 
 emconfig:$(EMCONFIG_DIR)/emconfig.json
 $(EMCONFIG_DIR)/emconfig.json:
