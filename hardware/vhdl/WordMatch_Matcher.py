@@ -1,5 +1,5 @@
 
-# Python model for word_match_matcher.vhd
+# Python model for WordMatch_Matcher.vhd
 
 import re
 
