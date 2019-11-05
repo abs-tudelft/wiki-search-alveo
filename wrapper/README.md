@@ -15,6 +15,7 @@ Dependencies
  - The host library must be built in the `alveo` directory; run `make host` in
    that directory after satisfying the dependencies listed in the `alveo`
    directory readme file.
+ - Clang, used to generate the Rust bindings from the C header file.
 
 Usage
 -----

@@ -18,6 +18,8 @@ Dependencies
  - A C++ compiler with C++11 support must be in `$PATH`. If you're using
    something other than `g++`, change the `CXX` variable in the makefile.
  - Apache Arrow must be installed and linkable by the above compiler.
+ - A Wikipedia dataset produced with the `data` folder (or post-processed with
+   the `optimize` folder) in order to run the host program.
 
 Usage
 -----
