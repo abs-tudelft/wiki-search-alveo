@@ -26,3 +26,11 @@ Usage
 
 Just run `make all` to generate the schema definition files and run `fletchgen`
 on them. Run `make clean` to clean the generated files.
+
+You can also run the `generate.py` script directly. Doing so, you can
+additionally supply a record batch and a number of rows as argument. This will
+then be used to generate an `srec` data file for simulation. While the
+generated simulation is also customized, you can quite easily copy a different
+data file and the appropriate addresses within the data file over into the
+custom simulation toplevel in hardware, in order to run a more advanced
+simulation.

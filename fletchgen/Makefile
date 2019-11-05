@@ -1,8 +1,8 @@
 
 .PHONY: all
 all:
-	python3 schemas.py
+	python3 generate.py
 
 .PHONY: clean
 clean:
-	rm -rf dot vhdl vhdmmio-doc *.yaml *.as *.log
+	rm -rf dot vhdl vhdmmio-doc *.yaml *.as *.rb *.log

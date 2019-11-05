@@ -1,5 +1,6 @@
 import pyarrow as pa
 import subprocess
+import sys
 
 # Pages schema
 pages_title  = pa.field('title', pa.utf8(), nullable=False)
@@ -26,5 +27,19 @@ stats_schema = pa.schema([pa.field('stats', pa.uint64(), nullable=False)]).add_m
 
 pa.output_stream('stats.as').write(stats_schema.serialize());
 
+# If a recordbatch is provided as test case input, trim it and pass it to
+# fletchgen instead of the schema.
+if len(sys.argv) > 1:
+    with open(sys.argv[1], 'rb') as fil:
+        tab = pa.RecordBatchFileReader(fil).read_all()
+    if len(sys.argv) > 2:
+        tab = tab.slice(0, int(sys.argv[2]))
+    with open('pages.rb', 'wb') as fil:
+        with pa.RecordBatchFileWriter(fil, pages_schema) as writer:
+            writer.write_table(tab)
+    pages_args = ['-r', 'pages.rb', '-s', 'vhdl/memory.srec']
+else:
+    pages_args = ['-i', 'pages.as']
+
 # Run fletchgen
-subprocess.run(['fletchgen', '-i', 'pages.as', '-i', 'result.as', '-i', 'stats.as', '-n', 'WordMatch'])
+subprocess.run(['fletchgen'] + pages_args + ['-i', 'result.as', '-i', 'stats.as', '-n', 'WordMatch', '--sim', '--axi'])

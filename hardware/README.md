@@ -29,5 +29,3 @@ not self-checking though; if you want to simulate, you should try to understand
 the test case and register file so you can modify it to change the test. The
 test case uses `vhdl/memory.srec` as its data source, which by default contains
 just three very short "articles".
-
-TODO: instructions for generating a more interesting dataset with Fletcher

@@ -1,5 +1,5 @@
 /*
 !.gitignore
-!schemas.py
+!*.py
 !Makefile
 !README.md
