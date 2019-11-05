@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
     platcfg.xclbin_prefix = bin_prefix.c_str();
     platcfg.emu_mode = emu_mode;
     platcfg.kernel_name = kernel_name.c_str();
+    platcfg.num_subkernels = 3;
     platcfg.keep_loaded = true;
     printf("word_match_init...\n");
     if (!word_match_init(&platcfg, false, reporter, NULL)) {
