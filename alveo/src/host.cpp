@@ -11,7 +11,11 @@ static void reporter(void *user, const char *status) {
 int main(int argc, char **argv) {
 
     // Parse command line.
-    std::string data_prefix = (argc > 1) ? argv[1] : "/work/shared/fletcher-alveo/simplewiki";
+    if (argc < 2) {
+        printf("Usage: %s <data-prefix> [binary-prefix] [kernel-name]\n", argv[0]);
+        exit(1);
+    }
+    std::string data_prefix = argv[1];
     std::string bin_prefix  = (argc > 2) ? argv[2] : "xclbin/word_match";
     std::string kernel_name = (argc > 3) ? argv[3] : "krnl_word_match_rtl";
 

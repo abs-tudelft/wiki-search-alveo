@@ -31,12 +31,6 @@ object WikipediaArrowSnappy {
     // output filename
     val output = args(1)
 
-    // number of partitions
-    val partitions = args(2).toInt
-
-    // limit rows
-    val limit = args(3).toInt
-
     val spark = SparkSession.builder
       .appName("Wikipedia to Arrow with Snappy")
       .config("arrow.memory.debug.allocator", true)
@@ -134,10 +128,6 @@ object WikipediaArrowSnappy {
           )
         )
       )
-      // .limit(limit)
-      .sort($"title")
-      .repartition(partitions)
-      .sortWithinPartitions($"title")
       .foreachPartition { partition =>
         {
           val titleField = new FieldType(false, new ArrowType.Utf8(), null)

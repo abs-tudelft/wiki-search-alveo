@@ -399,10 +399,17 @@ fn main() -> Result<(), ()> {
     let api = query.or(wiki_img).or(client).or(status);
 
     // Host application configuration setup
-    let data_prefix = CString::new("/work/shared/fletcher-alveo/enwiki-no-meta").unwrap();
-    let xclbin_prefix =
-        CString::new("/work/shared/fletcher-alveo/fletcher-alveo-demo/alveo/xclbin/word_match")
-            .unwrap();
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        println!("Usage: {} <data-prefix> [xclbin-prefix]", args[0]);
+        return Ok(());
+    }
+    let data_prefix = CString::new(args[1].as_str()).unwrap();
+    let xclbin_prefix = CString::new(if args.len() < 3 {
+        ""
+    } else {
+        &args[2]
+    }).unwrap();
     let emu_mode = CString::new("hw").unwrap();
     let kernel_name = CString::new("krnl_word_match_rtl").unwrap();
 

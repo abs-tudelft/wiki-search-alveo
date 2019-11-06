@@ -1,0 +1,6 @@
+[submodule "hardware/fletcher"]
+	path = hardware/fletcher
+	url = https://github.com/abs-tudelft/fletcher.git
+[submodule "hardware/vhsnunzip"]
+	path = hardware/vhsnunzip
+	url = https://github.com/abs-tudelft/vhsnunzip.git
