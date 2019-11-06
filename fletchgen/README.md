@@ -19,7 +19,7 @@ Dependencies
 ------------
 
  - `pyarrow` is installed (`pip3 install pyarrow`)
- - `fletcher` is installed (e.g. `pip3 install pyfletcher`) and in `$PATH`.
+ - `fletchgen` is installed (e.g. `pip3 install pyfletchgen`) and in `$PATH`.
 
 Usage
 -----
