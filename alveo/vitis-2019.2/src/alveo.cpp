@@ -101,6 +101,7 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
             if (device == NULL && access(xclbin_fname.c_str(), F_OK) != -1) {
                 if (!quiet) printf(" <--");
                 device = devices[i];
+                device_index = i;
             }
         }
         if (!quiet) printf("\n");
@@ -172,7 +173,7 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
 
     // Query the frequencies.
     XBUtilDumpInfo info;
-    xbutil_dump(info);
+    xbutil_dump(info, device_index);
     clock0 = info.clock0;
     clock1 = info.clock1;
     if (!quiet) printf("Frequencies are %.0f MHz (clock 0 & bus) and %.0f MHz (clock 1).\n\n", clock0, clock1);

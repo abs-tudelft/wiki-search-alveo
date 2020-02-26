@@ -10,6 +10,7 @@
 #include <string.h>
 #include <vector>
 #include <sstream>
+#include <regex>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -18,10 +19,10 @@
 /**
  * StackOverflow copypasta for running a process.
  */
-static std::string exec(const char* cmd) {
+static std::string exec(const std::string &cmd) {
     std::array<char, 128> buffer;
     std::string result;
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }
@@ -68,14 +69,20 @@ std::vector<std::string> glob(const std::string& pattern) {
  * frequency readout files. If one or both are not found, nullptrs are
  * returned. This function caches its findings after its first call.
  */
-static void get_paths(const std::string *&xmc_path_out, const std::string *&icap_path_out) {
+static void get_paths(const std::string *&xmc_path_out, const std::string *&icap_path_out, unsigned int index) {
     static bool first_run = true;
     static bool use_xbutil = true;
+    static unsigned int cur_index = 0;
     static std::string xmc_path;
     static std::string icap_path;
 
     xmc_path_out = nullptr;
     icap_path_out = nullptr;
+
+    if (index != cur_index) {
+        cur_index = index;
+        first_run = true;
+    }
 
     if (!first_run) {
         if (!use_xbutil) {
@@ -87,15 +94,30 @@ static void get_paths(const std::string *&xmc_path_out, const std::string *&icap
 
     first_run = false;
 
+    // When there are multiple devices, we need to use xbutil to tell us what
+    // the device ID is for the card with the given index. If this fails for
+    // whatever reason, we fall back to looking for any card.
+    std::string id = "*";
+    std::smatch match;
+    std::string xbutil_list = exec("xbutil list");
+    std::string re = "\\[" + std::to_string(index) + "\\] +([0-9a-zA-Z_:]+)";
+    if (std::regex_search(xbutil_list, match, std::regex(re))) {
+        id = match[1];
+        id += ".0";
+    } else {
+        std::cerr << "failed to get device ID for card with index " << index << ", ";
+        std::cerr << "falling back to matching any card" << std::endl;
+    }
+
     // Look for xmc node, which contains sensor readout files.
-    auto paths = glob("/sys/bus/pci/devices/*/xmc.m.*");
+    auto paths = glob("/sys/bus/pci/devices/" + id + "/xmc.m.*");
     if (paths.empty()) {
         return;
     }
     xmc_path = paths.front();
 
     // Look for icap node, which contains the frequency readout file.
-    paths = glob("/sys/bus/pci/devices/*/icap.m.*");
+    paths = glob("/sys/bus/pci/devices/" + id + "/icap.m.*");
     if (paths.empty()) {
         return;
     }
@@ -146,10 +168,10 @@ static void read_sysfs_floats(const std::string &filename, int num_vals, std::ve
 /**
  * Runs `xbutil dump` and puts some information into the given structure.
  */
-void xbutil_dump(XBUtilDumpInfo &info) {
+void xbutil_dump(XBUtilDumpInfo &info, unsigned int index) {
     const std::string *xmc_path;
     const std::string *icap_path;
-    get_paths(xmc_path, icap_path);
+    get_paths(xmc_path, icap_path, index);
 
     std::vector<float> data;
 
@@ -157,7 +179,7 @@ void xbutil_dump(XBUtilDumpInfo &info) {
 
         // Failed to find sysfs nodes to read the values we want, so fall back
         // to calling xbutil dump.
-        auto board = nlohmann::json::parse(exec("xbutil dump"))["board"];
+        auto board = nlohmann::json::parse(exec("xbutil dump -d " + std::to_string(index)))["board"];
         data.push_back(std::stof(board["info"]["clock0"].get<std::string>()));
         data.push_back(std::stof(board["info"]["clock1"].get<std::string>()));
         data.push_back(std::stof(board["physical"]["thermal"]["fpga_temp"].get<std::string>()));

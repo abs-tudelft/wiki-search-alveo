@@ -23,4 +23,4 @@ typedef struct {
 /**
  * Runs `xbutil dump` and puts some information into the given structure.
  */
-void xbutil_dump(XBUtilDumpInfo &info);
+void xbutil_dump(XBUtilDumpInfo &info, unsigned int index);

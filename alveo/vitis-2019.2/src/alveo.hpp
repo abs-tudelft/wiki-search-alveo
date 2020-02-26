@@ -42,6 +42,7 @@ public:
     std::vector<std::shared_ptr<AlveoKernelInstance>> instances;
     float clock0;
     float clock1;
+    unsigned int device_index;
 
     AlveoContext(const AlveoContext&) = delete;
     AlveoContext(const std::string &bin_prefix, const std::string &kernel_name, bool quiet = false);

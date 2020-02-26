@@ -181,8 +181,12 @@ const WordMatchResults *word_match_run(
 WordMatchHealthInfo word_match_health() {
     WordMatchHealthInfo result;
     try {
+        unsigned int index = 0;
+        if (state->hw_impl) {
+            index = state->hw_impl->get_device_index();
+        }
         XBUtilDumpInfo info;
-        xbutil_dump(info);
+        xbutil_dump(info, index);
         result.fpga_temp = info.fpga_temp;
         result.power_in = info.power_in;
         result.power_vccint = info.power_vccint;

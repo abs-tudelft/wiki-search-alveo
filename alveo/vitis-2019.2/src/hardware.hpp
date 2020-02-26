@@ -155,6 +155,13 @@ public:
         bool quiet=false);
 
     /**
+     * Returns the device index for this hardware implementation.
+     */
+    inline unsigned int get_device_index() {
+        return context.device_index;
+    }
+
+    /**
      * Resets the dataset stored in device memory.
      */
     virtual void clear_chunks();
