@@ -5,7 +5,16 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-AlveoKernelInstance::AlveoKernelInstance(cl_device_id device, cl_program program, const std::string &kernel_name) : device(device) {
+AlveoKernelInstance::AlveoKernelInstance(
+    cl_device_id device,
+    cl_program program,
+    const std::string &kernel_name,
+    unsigned int index
+) :
+    device(device),
+    kernel_name(kernel_name),
+    index(index)
+{
 
     // Create a context.
     cl_int err;
@@ -167,7 +176,7 @@ AlveoContext::AlveoContext(const std::string &bin_prefix, const std::string &ker
     }
     for (unsigned int i = 0; i < num_subdevices; i++) {
         instances.push_back(std::make_shared<AlveoKernelInstance>(
-            subdevices[i], program, kernel_name));
+            subdevices[i], program, kernel_name, i));
     }
     if (!quiet) printf("Found %u kernel instances.\n\n", num_subdevices);
 

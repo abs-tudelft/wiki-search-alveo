@@ -14,9 +14,11 @@ public:
     cl_context context;
     cl_command_queue queue;
     cl_kernel kernel;
+    const std::string kernel_name;
+    const unsigned int index;
 
     AlveoKernelInstance(const AlveoKernelInstance&) = delete;
-    AlveoKernelInstance(cl_device_id device, cl_program program, const std::string &kernel_name);
+    AlveoKernelInstance(cl_device_id device, cl_program program, const std::string &kernel_name, unsigned int index);
     ~AlveoKernelInstance();
 
     template <typename T>

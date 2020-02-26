@@ -2,6 +2,7 @@
 #include "hardware.hpp"
 #include <omp.h>
 #include <mutex>
+#include <iostream>
 
 /**
  * Constructs a search command for the hardware word matcher kernel.
@@ -55,7 +56,10 @@ HardwareWordMatchKernel::HardwareWordMatchKernel(
 {
 
     // Detect which bank this kernel is connected to.
-    for (bank = 0; bank < 4; bank++) {
+    // TODO: the autodetection code below is broken in Vitis/recent XRT
+    // versions, probably because the buffer upload is postponed. For now the
+    // banks are hardcoded, but this is not very nice.
+    /*for (bank = 0; bank < 4; bank++) {
         try {
             StdoutSuppressor x;
             AlveoBuffer test_buf(context, 4, bank);
@@ -63,6 +67,23 @@ HardwareWordMatchKernel::HardwareWordMatchKernel(
             break;
         } catch (const std::runtime_error&) {
         }
+    }*/
+    switch (context.index) {
+        case 0x0: bank = 0; break;
+        case 0x1: bank = 0; break;
+        case 0x2: bank = 0; break;
+        case 0x3: bank = 0; break;
+        case 0x4: bank = 0; break;
+        case 0x5: bank = 1; break;
+        case 0x6: bank = 1; break;
+        case 0x7: bank = 1; break;
+        case 0x8: bank = 1; break;
+        case 0x9: bank = 1; break;
+        case 0xA: bank = 3; break;
+        case 0xB: bank = 3; break;
+        case 0xC: bank = 3; break;
+        case 0xD: bank = 3; break;
+        case 0xE: bank = 3; break;
     }
 
     // Create buffers for the results.
@@ -75,13 +96,18 @@ HardwareWordMatchKernel::HardwareWordMatchKernel(
     result_stats = std::make_shared<AlveoBuffer>(
         context, CL_MEM_WRITE_ONLY, 20, bank);
 
-    // Set the kernel arguments that don't ever change.
-    context.set_arg(4, (unsigned int)0);
-    context.set_arg(5+num_sub, result_title_offset->buffer);
-    context.set_arg(6+num_sub, result_title_values->buffer);
-    context.set_arg(7+num_sub, result_matches->buffer);
-    context.set_arg(8+num_sub, (unsigned int)num_results);
-    context.set_arg(9+num_sub, result_stats->buffer);
+    // Set the kernel arguments that don't ever change. XRT prints inane
+    // warnings about some kernels not being connected to some banks when
+    // setting the parameters, which we suppress with the StdoutSuppressor.
+    {
+        StdoutSuppressor x;
+        context.set_arg(4, (unsigned int)0);
+        context.set_arg(5+num_sub, result_title_offset->buffer);
+        context.set_arg(6+num_sub, result_title_values->buffer);
+        context.set_arg(7+num_sub, result_matches->buffer);
+        context.set_arg(8+num_sub, (unsigned int)num_results);
+        context.set_arg(9+num_sub, result_stats->buffer);
+    }
 
     // Reset the dataset.
     clear_chunks();
