@@ -21,4 +21,6 @@ Dependencies
 Usage
 -----
 
-Use the appropriate subfolder for the toolchain/runtime version you have.
+Use the appropriate subfolder for the toolchain/runtime version you have. After
+you run `make host`, symlinks to `ffi.h` and `libwordmatch.so` are created here
+for the Rust wrapper to connect to.
