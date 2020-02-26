@@ -131,7 +131,8 @@ $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
 	$(CXX) $(CXXFLAGS) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
 	$(CXX) $(CXXFLAGS) src/host.cpp -L . -lwordmatch -Wl,-rpath,. -o '$@' $(LDFLAGS)
 	rm -f ../libwordmatch.so
-	ln -s sdx-2018.3/libwordmatch.so ../libwordmatch.so
+	ln -sf sdx-2018.3/libwordmatch.so ../libwordmatch.so
+	ln -sf sdx-2018.3/src/ffi.h ../ffi.h
 
 emconfig:$(EMCONFIG_DIR)/emconfig.json
 $(EMCONFIG_DIR)/emconfig.json:
