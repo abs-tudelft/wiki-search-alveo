@@ -1,0 +1,17 @@
+tmp_kernel_*
+packaged_kernel_*
+host
+*.log
+*.jou
+/xclbin/
+/_x/
+/all-sources/
+*.csv
+/.run/
+emconfig.json
+*.protoinst
+*.wcfg
+*.wdb
+/xsim.dir/
+/*.so
+*.run_summary
