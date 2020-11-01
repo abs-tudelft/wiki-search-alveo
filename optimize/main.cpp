@@ -22,27 +22,36 @@ std::shared_ptr<arrow::Table> read_input(const std::string &in_prefix) {
     for (unsigned int index = 0; index < num_batches; index++) {
         std::string fname = in_prefix + "-" + std::to_string(index) + ".rb";
         printf("  Read batch %u using thread %d...\n", index, omp_get_thread_num());
-        std::shared_ptr<arrow::io::MemoryMappedFile> file;
-        arrow::Status status = arrow::io::MemoryMappedFile::Open(fname, arrow::io::FileMode::type::READ, &file);
-        if (!status.ok()) {
-            throw std::runtime_error("MemoryMappedFile::Open failed for " + fname + ": " + status.ToString());
+        arrow::Result<std::shared_ptr<arrow::io::MemoryMappedFile>> fopen_result;
+	std::shared_ptr<arrow::io::MemoryMappedFile> file;
+        fopen_result = arrow::io::MemoryMappedFile::Open(fname, arrow::io::FileMode::type::READ);
+            if (fopen_result.ok()) {
+	file = fopen_result.ValueOrDie();
+	} else {
+            throw std::runtime_error("MemoryMappedFile::Open failed for " + fname + ": " + fopen_result.status().ToString());
         }
         std::shared_ptr<arrow::ipc::RecordBatchFileReader> reader;
-        status = arrow::ipc::RecordBatchFileReader::Open(file, &reader);
-        if (!status.ok()) {
-            throw std::runtime_error("RecordBatchFileReader::Open failed for " + fname + ": " + status.ToString());
+        arrow::Result<std::shared_ptr<arrow::ipc::RecordBatchFileReader>> fopenrb_result = arrow::ipc::RecordBatchFileReader::Open(file);
+        if (fopenrb_result.ok()) {
+	    reader = fopenrb_result.ValueOrDie();
+	} else {
+            throw std::runtime_error("RecordBatchFileReader::Open failed for " + fname + ": " + fopenrb_result.status().ToString());
         }
         std::shared_ptr<arrow::RecordBatch> batch;
-        status = reader->ReadRecordBatch(0, &batch);
-        if (!status.ok()) {
-            throw std::runtime_error("ReadRecordBatch() failed for " + fname + ": " + status.ToString());
+        arrow::Result<std::shared_ptr<arrow::RecordBatch>> readrb_result = reader->ReadRecordBatch(0);
+        if (readrb_result.ok()) {
+	    batch = readrb_result.ValueOrDie();
+	} else {
+            throw std::runtime_error("ReadRecordBatch() failed for " + fname + ": " + readrb_result.status().ToString());
         }
         chunks[index] = batch;
     }
     std::shared_ptr<arrow::Table> table;
-    arrow::Status status = arrow::Table::FromRecordBatches(chunks, &table);
-    if (!status.ok()) {
-        throw std::runtime_error("Table::FromRecordBatches failed: " + status.ToString());
+    arrow::Result<std::shared_ptr<arrow::Table>> fromrb_result = arrow::Table::FromRecordBatches(chunks);
+    if (fromrb_result.ok()) {
+	table = fromrb_result.ValueOrDie();
+    } else{
+        throw std::runtime_error("Table::FromRecordBatches failed: " + fromrb_result.status().ToString());
     }
     printf("Read %lld rows into memory.\n", (long long)table->num_rows());
     return table;
@@ -97,13 +106,17 @@ void write_output(std::shared_ptr<arrow::Table> table, const std::string &out_pr
                 {
                     std::string fname = out_prefix + "-" + std::to_string(current_chunk) + ".rb";
                     std::shared_ptr<arrow::io::OutputStream> file;
-                    arrow::Status status = arrow::io::FileOutputStream::Open(fname, &file);
-                    if (!status.ok()) {
+                    arrow::Result<std::shared_ptr<arrow::io::FileOutputStream>> fopen_result = arrow::io::FileOutputStream::Open(fname);
+                    if (fopen_result.ok()) {
+			file = fopen_result.ValueOrDie();
+		    } else {
                         throw std::runtime_error("FileOutputStream::Open failed for " + fname + ": " + status.ToString());
                     }
                     std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
-                    status = arrow::ipc::RecordBatchFileWriter::Open(file.get(), table->schema(), &writer);
-                    if (!status.ok()) {
+                    arrow::Result<std::shared_ptr<arrow::ipc::RecordBatchWriter>> newfw_result = arrow::ipc::NewFileWriter(file.get(), table->schema());
+                    if (newfw_result.ok()) {
+			writer = newfw_result.ValueOrDie();
+		    } else {
                         throw std::runtime_error("RecordBatchFileWriter::Open failed for " + fname + ": " + status.ToString());
                     }
                     status = writer->WriteRecordBatch(*batch);
