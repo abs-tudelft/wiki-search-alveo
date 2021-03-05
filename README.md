@@ -34,3 +34,46 @@ The functions of the modules are:
  - `wrapper`: Rust bindings for the aforementioned host library.
  - `client`: Vuetify-based frontend code for the web application.
  - `server`: Warp-based server code for the web application.
+
+## Build instructions
+
+### Building the bitstream and host C code
+To build the design, clone the repository and the submodules:
+```
+git clone https://github.com/abs-tudelft/wiki-search-alveo.git
+cd wiki-search-alveo/
+git submodule init
+git submodule update
+cd hardware/fletcher
+git submodule init
+git submodule update
+```
+Then, go into the `alveo/vitis-2019.2` directory and build the design for your Alveo board. The supported boards are the U200 and U280, because the design uses 3 DDR DIMMs.
+For the U200: `make all TARGET=hw DEVICE=xilinx_u200_xdma_201830_1`
+For the U250: `make all TARGET=hw DEVICE=xilinx_u250_xdma_201830_2`
+The build can take over 12 hours and requires a lot of RAM (32GB is not a luxury).
+
+The host code that interfaces with the Alveo, along with the software implementation of the demo, is built along with the bitstream.
+This code requires Apache Spark to be installed.
+
+### Building the webapp client
+You will need Node.js (npm) to build the client. Go into the `client` directory and run `npm install` followed by `npm run build`.
+
+### Preparing a dataset
+Go into the `data` directory and follow the [instructions](data/README.md) to prepare a wikipedia dataset.
+You will need to download a wikipedia database dump. There is an Apache Spark program that prepares and compresses it in the way the FPGA design expects it.
+Don't worry, you don't need a large Spark cluster to run this program, you can just download a pre-built Spark release and run it on your local machine.
+
+Now that the input dataset has been prepared, it can be optimized so that the number of chunks matches the number of kernels in the design. There is a program in the `optimize` directory that does exactly this. Build it by running `make` and then run the program on your dataset:
+`./optimize <input-prefix> <output-prefix> [N]`. N defaults to 15, the number of kernels currently in the design.
+
+### Building the webapp server
+Go into the `server` directory and build the server according to the [server documentation](server/README.md)
+
+## Running the demo
+Go into the `server` directory, setup Vitis, XRT, rust (cargo) by sourcing their setup files or adding them to your PATH. Add the `alveo` directory to your linker's search path: ``export LD_LIBRARY_PATH=`pwd`/../alveo:$LD_LIBRARY_PATH``
+Run the server with the first argument pointing to your dataset (for example, in `data/enwiki-no-meta-15-chunks-[0-15].rb`) and the second to the alveo bitstream:
+`cargo run --release -- ../../data/enwiki-no-meta-15-chunks ../alveo/vitis-2019.2/xclbin/word_match`
+
+Now, open a browser and navigate to the [webapp](http://localhost:3030).
+You can type a query to search for and choose to run it on the FPGA or the CPU. For the CPU you can select a number of threads to execute on (up to 40).
