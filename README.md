@@ -48,9 +48,9 @@ cd hardware/fletcher
 git submodule init
 git submodule update
 ```
-Then, go into the `alveo/vitis-2019.2` directory and build the design for your Alveo board. The supported boards are the U200 and U280, because the design uses 3 DDR DIMMs.
-For the U200: `make all TARGET=hw DEVICE=xilinx_u200_xdma_201830_1`
-For the U250: `make all TARGET=hw DEVICE=xilinx_u250_xdma_201830_2`
+Then, go into the `alveo/vitis-2019.2` directory and build the design for your Alveo board. The supported boards are the U200 and U280, because the design uses 3 DDR DIMMs. \
+For the U200: `make all TARGET=hw DEVICE=xilinx_u200_xdma_201830_1` \
+For the U250: `make all TARGET=hw DEVICE=xilinx_u250_xdma_201830_2` \
 The build can take over 12 hours and requires a lot of RAM (32GB is not a luxury).
 
 The host code that interfaces with the Alveo, along with the software implementation of the demo, is built along with the bitstream.
