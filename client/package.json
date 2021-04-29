@@ -10,7 +10,7 @@
     "@mdi/js": "^4.9.95",
     "@vue/component-compiler-utils": "^3.2.0",
     "deepmerge": "^4.2.2",
-    "fibers": "^4.0.3",
+    "fibers": "^5.0.0",
     "parcel-bundler": "^1.12.5",
     "prettier": "^1.19.1",
     "sass": "^1.26.10",
