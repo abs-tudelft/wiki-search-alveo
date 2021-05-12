@@ -22,6 +22,6 @@
     "@mdi/font": "^4.9.95",
     "vue": "^2.6.11",
     "vue-hot-reload-api": "^2.3.4",
-    "vuetify": "^2.4.11"
+    "vuetify": "^2.5.0"
   }
 }
