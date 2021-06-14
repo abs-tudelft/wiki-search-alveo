@@ -35,9 +35,11 @@ void SoftwareWordMatch::execute(const WordMatchConfig &config,
 
     // Get a Table representation of the data.
     std::shared_ptr<arrow::Table> table;
-    arrow::Status status = arrow::Table::FromRecordBatches(chunks, &table);
-    if (!status.ok()) {
-        throw std::runtime_error("Table::FromRecordBatches failed: " + status.ToString());
+    arrow::Result<std::shared_ptr<arrow::Table>> result = arrow::Table::FromRecordBatches(chunks);
+    if (result.ok()) {
+	table = result.ValueOrDie();
+    } else {
+        throw std::runtime_error("Table::FromRecordBatches failed: " + result.status().ToString());
     }
 
     // Make sure we have enough presults result records and clear them.

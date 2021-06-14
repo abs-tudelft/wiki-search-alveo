@@ -104,20 +104,24 @@ std::shared_ptr<arrow::RecordBatch> WordMatchDatasetLoader::next() {
 
     // Load the RecordBatch into the default memory pool as a single blob
     // of data.
-    std::shared_ptr<arrow::io::MemoryMappedFile> file;
-    arrow::Status status = arrow::io::MemoryMappedFile::Open(fname, arrow::io::FileMode::type::READ, &file);
-    if (!status.ok()) {
-        throw std::runtime_error("MemoryMappedFile::Open failed for " + fname + ": " + status.ToString());
+    arrow::Result<std::shared_ptr<arrow::io::MemoryMappedFile>> result  = arrow::io::MemoryMappedFile::Open(fname, arrow::io::FileMode::type::READ);
+    if (!result.ok()) {
+        throw std::runtime_error("MemoryMappedFile::Open failed for " + fname + ": " + result.status().ToString());
     }
+    std::shared_ptr<arrow::io::MemoryMappedFile> file = result.ValueOrDie();
     std::shared_ptr<arrow::ipc::RecordBatchFileReader> reader;
-    status = arrow::ipc::RecordBatchFileReader::Open(file, &reader);
-    if (!status.ok()) {
-        throw std::runtime_error("RecordBatchFileReader::Open failed for " + fname + ": " + status.ToString());
+    arrow::Result<std::shared_ptr<arrow::ipc::RecordBatchFileReader>> readerResult = arrow::ipc::RecordBatchFileReader::Open(file);
+    if (readerResult.ok()) {
+        reader = readerResult.ValueOrDie();
+    } else {
+        throw std::runtime_error("RecordBatchFileReader::Open failed for " + fname + ": " + readerResult.status().ToString());
     }
     std::shared_ptr<arrow::RecordBatch> batch;
-    status = reader->ReadRecordBatch(0, &batch);
-    if (!status.ok()) {
-        throw std::runtime_error("ReadRecordBatch() failed for " + fname + ": " + status.ToString());
+    arrow::Result<std::shared_ptr<arrow::RecordBatch>> batchResult = reader->ReadRecordBatch(0);
+    if (batchResult.ok()) {
+        batch = batchResult.ValueOrDie();
+    } else {
+        throw std::runtime_error("ReadRecordBatch() failed for " + fname + ": " + batchResult.status().ToString());
     }
 
     // In order to make the buffers individually freeable and aligned, we
@@ -134,9 +138,11 @@ std::shared_ptr<arrow::RecordBatch> WordMatchDatasetLoader::next() {
                 continue;
             }
             std::shared_ptr<arrow::Buffer> out_buffer;
-            status = in_buffer->Copy(0, in_buffer->size(), &out_buffer);
-            if (!status.ok()) {
-                throw std::runtime_error("Arrow buffer copy failed: " + status.ToString());
+            arrow::Result<std::shared_ptr<arrow::Buffer>> bufferResult = in_buffer->CopySlice(0, in_buffer->size());
+            if (bufferResult.ok()) {
+                out_buffer = bufferResult.ValueOrDie();
+            } else {
+                throw std::runtime_error("Arrow buffer copy failed: " + bufferResult.status().ToString());
             }
             buffers.push_back(out_buffer);
         }
