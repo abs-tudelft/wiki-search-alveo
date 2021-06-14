@@ -110,7 +110,6 @@ build: $(BINARY_CONTAINERS)
 # Building kernel
 $(XCLBIN)/word_match.$(TARGET).$(XSA).xclbin: $(BINARY_CONTAINER_vadd_OBJS)
 	mkdir -p $(XCLBIN)
-ifeq ($(DEVICE),xilinx_u200_xdma_201920_1)
 	$(VPP) $(CLFLAGS) -l $(LDCLFLAGS) -o $(XCLBIN)/word_match.$(TARGET).$(XSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(XSA).xo \
 		--nk krnl_word_match_rtl:15 \
 		--sp krnl_word_match_rtl_1.m_axi:DDR[0] --slr krnl_word_match_rtl_1:SLR0 \
@@ -129,30 +128,7 @@ ifeq ($(DEVICE),xilinx_u200_xdma_201920_1)
 		--sp krnl_word_match_rtl_14.m_axi:DDR[3] --slr krnl_word_match_rtl_14:SLR2 \
 		--sp krnl_word_match_rtl_15.m_axi:DDR[3] --slr krnl_word_match_rtl_15:SLR2 \
 		--kernel_frequency '0:300|1:200'
-else
-ifeq ($(DEVICE),xilinx_u250_xdma_201830_2)
-	$(VPP) $(CLFLAGS) -l $(LDCLFLAGS) -o $(XCLBIN)/word_match.$(TARGET).$(XSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(XSA).xo \
-		--nk krnl_word_match_rtl:15 \
-		--sp krnl_word_match_rtl_1.m_axi:DDR[0] --slr krnl_word_match_rtl_1:SLR0 \
-		--sp krnl_word_match_rtl_2.m_axi:DDR[0] --slr krnl_word_match_rtl_2:SLR0 \
-		--sp krnl_word_match_rtl_3.m_axi:DDR[0] --slr krnl_word_match_rtl_3:SLR0 \
-		--sp krnl_word_match_rtl_4.m_axi:DDR[0] --slr krnl_word_match_rtl_4:SLR0 \
-		--sp krnl_word_match_rtl_5.m_axi:DDR[0] --slr krnl_word_match_rtl_5:SLR0 \
-		--sp krnl_word_match_rtl_6.m_axi:DDR[1] --slr krnl_word_match_rtl_6:SLR1 \
-		--sp krnl_word_match_rtl_7.m_axi:DDR[1] --slr krnl_word_match_rtl_7:SLR1 \
-		--sp krnl_word_match_rtl_8.m_axi:DDR[1] --slr krnl_word_match_rtl_8:SLR1 \
-		--sp krnl_word_match_rtl_9.m_axi:DDR[1] --slr krnl_word_match_rtl_9:SLR1 \
-		--sp krnl_word_match_rtl_10.m_axi:DDR[1] --slr krnl_word_match_rtl_10:SLR1\
-		--sp krnl_word_match_rtl_11.m_axi:DDR[2] --slr krnl_word_match_rtl_11:SLR2 \
-		--sp krnl_word_match_rtl_12.m_axi:DDR[2] --slr krnl_word_match_rtl_12:SLR2 \
-		--sp krnl_word_match_rtl_13.m_axi:DDR[2] --slr krnl_word_match_rtl_13:SLR2 \
-		--sp krnl_word_match_rtl_14.m_axi:DDR[2] --slr krnl_word_match_rtl_14:SLR2 \
-		--sp krnl_word_match_rtl_15.m_axi:DDR[2] --slr krnl_word_match_rtl_15:SLR2 \
-		--kernel_frequency '0:300|1:200'
-endif
-endif
 # 	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) -o'$@' $(+)
-
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
