@@ -53,9 +53,15 @@ xcl2_HDRS:=libs/xcl2/xcl2.hpp
 
 xcl2_CXXFLAGS:=-Ilibs/xcl2 -fopenmp
 
+#Add flags in case we're running from a conda environment
+ifdef CONDA_PREFIX
+CONDA_INCLUDE_FLAG=-I"$(CONDA_PREFIX)"/include
+CONDA_LDFLAG=-L"$(CONDA_PREFIX)"/lib
+endif
+
 #Include Libraries
-CXXFLAGS += $(xcl2_CXXFLAGS)
-LDFLAGS += $(xcl2_LDFLAGS)
+CXXFLAGS += $(xcl2_CXXFLAGS) $(CONDA_INCLUDE_FLAG)
+LDFLAGS += $(xcl2_LDFLAGS) $(CONDA_LDFLAG)
 HOST_SRCS += $(xcl2_SRCS)
 include config.mk
 
@@ -163,7 +169,7 @@ endif
 
 # Cleaning stuff
 clean:
-	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*sw_emu*,*hw_emu*}
+	-$(RMDIR) $(EXECUTABLE) libwordmatch.so ../libwordmatch.so $(XCLBIN)/{*sw_emu*,*hw_emu*}
 	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv
 	-$(RMDIR) src/*.ll *v++* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb
 
