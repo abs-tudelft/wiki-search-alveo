@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@mdi/js": "^5.9.55",
-    "@vue/component-compiler-utils": "^3.2.0",
+    "@vue/component-compiler-utils": "^3.2.2",
     "deepmerge": "^4.2.2",
     "fibers": "^5.0.0",
     "parcel-bundler": "^1.12.5",
