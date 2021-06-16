@@ -31,9 +31,9 @@ echo "Installing Apache Arrow 2.0..."
 mkdir -p $wdir/arrow && cd $wdir/arrow && \
 git clone https://github.com/apache/arrow.git && \
 cd arrow && \
-git checkout apache-arrow-2.0.0 && \
+git checkout apache-arrow-3.0.0 && \
 cd $wdir/arrow && mkdir build && cd build && \
-cmake -DCMAKE_INSTALL_PREFIX:PATH=$wdir/arrow/install ../arrow/cpp && \
+CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" LDFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0"  cmake -DCMAKE_INSTALL_PREFIX:PATH=$wdir/arrow/install ../arrow/cpp && \
 make -j8 && \
 mkdir -p $wdir/arrow/install && \
 make install
@@ -164,7 +164,7 @@ bash -c "source /opt/xilinx/xrt/setup.sh && \
 cd $repodir/alveo/vitis-2019.2 && \
 XILINX_VITIS=yolo \ 
 PKG_CONFIG_PATH=$wdir/arrow/build/src/arrow \
-LD_LIBRARY_PATH=$wdir/arrow/install/lib64 make host"
+make host" 
 #Xilinx build files want this to be defined, but it is not used
 if [ $? != 0 ]; then
   echo "Something went wrong during wiki-search host code building, exiting"
