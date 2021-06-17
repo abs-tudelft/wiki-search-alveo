@@ -128,7 +128,7 @@ export PATH=$PATH:$wdir/spark/spark-3.1.1-bin-hadoop2.7/bin
 
 # Install snappy decompressor (software)
 if [ -d $wdir/snappy/install ]; then
-  echo "Snappy seems to be downloaded already, skipping..."
+  echo "Snappy seems to be installed already, skipping..."
 else
 mkdir -p $wdir/snappy && cd $wdir/snappy
 git clone https://github.com/google/snappy
@@ -187,7 +187,7 @@ fi
 # build the server
 echo "Building the server code"
 cd $repodir/server && \
-LD_LIBRARY_PATH=`pwd`/../alveo \
+LD_LIBRARY_PATH=$repodir/alveo$wdir/arrow/install/lib:$wdir/snappy/install/lib:$LD_LIBRARY_PATH \
 cargo build
 if [ $? != 0 ]; then
   echo "Something went wrong during server code building, exiting"
@@ -196,6 +196,9 @@ fi
 
 
 # Create an example dataset
+if [ -f $repodir/data/simplewiki-rechunked.rb0 ]; then
+echo "An existing example dataset has been found. Skipping creation..."
+else
 echo "Creating an example dataset"
 cd $repodir/data
 if [ ! -f simplewiki-latest-pages-articles-multistream.xml.bz2 ]; then
@@ -215,7 +218,7 @@ if [ $? != 0 ]; then
   echo "Something went wrong during dataset optimization, exiting"
   exit -1
 fi
-
+fi
 
 if [ ! -d $repodir/alveo/vitis-2019.2/xclbin ]; then
   echo "Error: Please make sure there is a bitstream available in alveo/vitis-2019.2/xclbin"
@@ -225,6 +228,6 @@ fi
 # Start the application
 echo "Running the application..."
 cd $repodir/server && \
-LD_LIBRARY_PATH=`pwd`/../alveo \
+LD_LIBRARY_PATH=$repodir/alveo \
 cargo run ../data/simplewiki-rechunked ../alveo/xclbin/word_match
 
