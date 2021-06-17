@@ -52,7 +52,7 @@ endif
 
 #Checks for g++
 ifeq ($(HOST_ARCH), x86)
-ifneq ($(shell expr $(shell g++ -dumpversion) \>= 5), 1)
+ifneq ($(shell expr $(shell g++ -dumpversion | cut -d '.' -f 1) \>= 5), 1)
 ifndef XILINX_VIVADO
 $(error [ERROR]: g++ version older. Please use 5.0 or above.)
 else
