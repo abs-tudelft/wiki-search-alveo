@@ -110,6 +110,15 @@ all: check-devices $(EXECUTABLE) $(BINARY_CONTAINERS) emconfig
 .PHONY: exe
 exe: $(EXECUTABLE)
 
+# Set the appropriate bank index in the host code
+ifneq ($(findstring xilinx_u200, $(DEVICE)), )
+CXXFLAGS += -DBANK3_INDEX=3
+else
+ifneq ($(findstring xilinx_u250, $(DEVICE)), )
+CXXFLAGS += -DBANK3_INDEX=2
+endif
+endif
+
 .PHONY: build
 build: $(BINARY_CONTAINERS)
 
