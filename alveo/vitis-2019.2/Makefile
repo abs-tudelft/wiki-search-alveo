@@ -110,15 +110,6 @@ all: check-devices $(EXECUTABLE) $(BINARY_CONTAINERS) emconfig
 .PHONY: exe
 exe: $(EXECUTABLE)
 
-# Set the appropriate bank index in the host code
-ifneq ($(findstring xilinx_u200, $(DEVICE)), )
-CXXFLAGS += -DBANK3_INDEX=3
-else
-ifneq ($(findstring xilinx_u250, $(DEVICE)), )
-CXXFLAGS += -DBANK3_INDEX=2
-endif
-endif
-
 .PHONY: build
 build: $(BINARY_CONTAINERS)
 
@@ -170,14 +161,23 @@ endif
 endif
 # 	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) -o'$@' $(+)
 
+# Set the appropriate bank index in the host code
+ifneq ($(findstring xilinx_u200, $(DEVICE)), )
+DDR_BANK_ASSIGNMENT = -DBANK3_INDEX=3
+else
+ifneq ($(findstring xilinx_u250, $(DEVICE)), )
+DDR_BANK_ASSIGNMENT = -DBANK3_INDEX=2
+endif
+endif
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
-	$(CXX) $(CXXFLAGS) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
-	$(CXX) $(CXXFLAGS) src/host.cpp -L . -lwordmatch -Wl,-rpath,. -o '$@' $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) ${DDR_BANK_ASSIGNMENT) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DDR_BANK_ASSIGNMENT) src/host.cpp -L . -lwordmatch -Wl,-rpath,. -o '$@' $(LDFLAGS)
 	rm -f ../libwordmatch.so
 	ln -sf vitis-2019.2/libwordmatch.so ../libwordmatch.so
 	ln -sf vitis-2019.2/src/ffi.h ../ffi.h
+	$(info "Building host code for device $(DEVICE), make sure this is correct (U200/U250) because it determines the DDR bank assignment!")
 
 emconfig:$(EMCONFIG_DIR)/emconfig.json
 $(EMCONFIG_DIR)/emconfig.json:
