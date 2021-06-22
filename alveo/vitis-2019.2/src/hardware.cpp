@@ -59,7 +59,7 @@ HardwareWordMatchKernel::HardwareWordMatchKernel(
     // TODO: the autodetection code below is broken in Vitis/recent XRT
     // versions, probably because the buffer upload is postponed. For now the
     // banks are hardcoded, but this is not very nice.
-    /*for (bank = 0; bank < 4; bank++) {
+    for (bank = 0; bank < 4; bank++) {
         try {
             StdoutSuppressor x;
             AlveoBuffer test_buf(context, 4, bank);
@@ -67,7 +67,8 @@ HardwareWordMatchKernel::HardwareWordMatchKernel(
             break;
         } catch (const std::runtime_error&) {
         }
-    }*/
+    }
+/*
     switch (context.index) {
         case 0x0: bank = 0; break;
         case 0x1: bank = 0; break;
@@ -85,6 +86,7 @@ HardwareWordMatchKernel::HardwareWordMatchKernel(
         case 0xD: bank = 3; break;
         case 0xE: bank = 3; break;
     }
+*/
 
     // Create buffers for the results.
     result_title_offset = std::make_shared<AlveoBuffer>(
