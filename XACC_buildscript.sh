@@ -172,7 +172,7 @@ bash -c "source /opt/xilinx/xrt/setup.sh && \
 cd $repodir/alveo/vitis-2019.2 && \
 XILINX_VITIS=yolo \ 
 PKG_CONFIG_PATH=$wdir/arrow/build/src/arrow \
-make host" 
+make host DEVICE=xilinx_u250" 
 #Xilinx build files want this to be defined, but it is not used
 if [ $? != 0 ]; then
   echo "Something went wrong during wiki-search host code building, exiting"
