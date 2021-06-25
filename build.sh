@@ -9,6 +9,9 @@ wdir=$scriptdir/work
 mkdir -p $wdir
 cd $wdir
 
+# Name of the Conda environment
+cenv=wiki-search-build-env
+
 # Clone submodules
 git submodule init
 git submodule update
@@ -20,15 +23,24 @@ popd
 echo "Script located at $scriptdir, assuming it is still located in the root of the wiki-search-alveo repo. We will install various software dependencies at $wdir. This will consume a fair amount of diskspace. Press enter to continue or Ctrl-C to abort..."
 read
 
-# Activate an environment with recent GCC, CMake, python
-echo "Activating /mnt/scratch/tud-abs Conda environment"
-source /mnt/scratch/tud-abs/abs-env.sh
+# Create an environment with recent GCC, CMake, python
+if [ ! -d $wdir/$cenv ]; then
+  echo "Creating Conda environment..."
+  conda env create -f $scriptdir/conda_env.yml --prefix $wdir/$cenv
+  if [ $? != 0 ]; then
+    echo "An error occurred during Conda environment creation."
+    exit -1
+  fi
+fi
+
+echo "Activating Conda environment"
+conda activate $cenv
 
 # Install Apache Arrow
 if [ -d $wdir/arrow/install/lib ]; then
   echo "Apache Arrow seems to be installed already, skipping..."
 else
-echo "Installing Apache Arrow 2.0..."
+echo "Installing Apache Arrow..."
 mkdir -p $wdir/arrow && cd $wdir/arrow && \
 git clone https://github.com/apache/arrow.git && \
 cd arrow && \
