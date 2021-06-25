@@ -242,7 +242,5 @@ if [ $? != 0 ]; then
 fi
 fi
 
-if [ ! -d $repodir/alveo/vitis-2019.2/xclbin ]; then
-  echo "Error: Please make sure there is a bitstream available in alveo/vitis-2019.2/xclbin"
-  exit -1
-fi
+echo "Finished building wiki-search example. Start the application using the run script.\n\n"
+exit 0

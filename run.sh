@@ -1,4 +1,9 @@
 
+if [ ! -d ./alveo/vitis-2019.2/xclbin ]; then
+  echo "Error: Please make sure there is a bitstream available in alveo/vitis-2019.2/xclbin"
+  exit -1
+fi
+
 # Start the application
 echo "Running the application..."
 cd server && \
