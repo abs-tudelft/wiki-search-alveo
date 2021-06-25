@@ -49,4 +49,3 @@ dependencies:
     - pyyaml==5.4.1
     - vhdeps==0.4.2
     - vhdmmio==0.0.3
-prefix: /mnt/scratch/tud-abs/conda
