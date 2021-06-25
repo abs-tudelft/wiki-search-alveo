@@ -141,7 +141,7 @@ git submodule update --init
 popd
 mkdir -p $wdir/snappy/build && cd $wdir/snappy/build
 cmake -DCMAKE_INSTALL_PREFIX:PATH=$wdir/snappy/install \
--DBUILD_SHARED_LIBS=On ../snappy
+-DCMAKE_BUILD_TYPE=release -DBUILD_SHARED_LIBS=On ../snappy
 make
 make install
 fi
@@ -196,7 +196,7 @@ fi
 echo "Building the server code"
 cd $repodir/server && \
 LD_LIBRARY_PATH=$repodir/alveo:$wdir/arrow/install/lib:$wdir/snappy/install/lib:$LD_LIBRARY_PATH \
-cargo build
+cargo build --release
 if [ $? != 0 ]; then
   echo "Something went wrong during server code building, exiting"
   exit -1
