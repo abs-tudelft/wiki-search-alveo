@@ -7,7 +7,6 @@ scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 repodir=$scriptdir
 wdir=$scriptdir/work
 mkdir -p $wdir
-cd $wdir
 
 # Name of the Conda environment
 cenv=wiki-search-build-env
@@ -34,10 +33,11 @@ if [ ! -d $wdir/$cenv ]; then
 fi
 
 echo "Activating Conda environment"
-conda activate $cenv
+source $wdir/$cenv/etc/profile.d/conda.sh
+conda activate $wdir/$cenv
 
 # Install Apache Arrow
-if [ -d $wdir/arrow/install/lib ]; then
+if [ -d $wdir/arrow/install ]; then
   echo "Apache Arrow seems to be installed already, skipping..."
 else
 echo "Installing Apache Arrow..."
@@ -55,6 +55,7 @@ if [ $? != 0 ]; then
   echo "Something went wrong during Apache Arrow 2.0 installation, exiting"
   exit -1
 fi
+arrow_libdir=$wdir/arrow/install/$(ls $wdir/arrow/install | grep lib) #some systems have a lib dir, other a lib64...
 
 # Install node.js and npm
 if [ -d $wdir/nodejs/node-v14.16.1-linux-x64/bin ]; then
@@ -158,10 +159,10 @@ make
 make install
 fi
 if [ $? != 0 ]; then
-  echo "Something went wrong during Snappy Spark installation, exiting"
+  echo "Something went wrong during Snappy installation, exiting"
   exit -1
 fi
-
+snappy_libdir=$wdir/snappy/install/$(ls $wdir/snappy/install | grep lib) #some systems have a lib dir, other a lib64...
 
 echo "Finished Building the prerequisites. Now continuing with the wiki-search application..."
 
@@ -207,7 +208,7 @@ fi
 # build the server
 echo "Building the server code"
 cd $repodir/server && \
-LD_LIBRARY_PATH=$repodir/alveo:$wdir/arrow/install/lib:$wdir/snappy/install/lib:$LD_LIBRARY_PATH \
+LD_LIBRARY_PATH=$repodir/alveo:$arror_libdir:$snappy_libdir:$LD_LIBRARY_PATH \
 cargo build --release
 if [ $? != 0 ]; then
   echo "Something went wrong during server code building, exiting"
