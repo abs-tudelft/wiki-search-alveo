@@ -31,26 +31,31 @@ popd
 echo "Script located at $scriptdir, assuming it is still located in the root of the wiki-search-alveo repo. We will install various software dependencies at $wdir. This will consume a fair amount of diskspace. Press enter to continue or Ctrl-C to abort..."
 read
 
-if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8 ] && [ ! -d $wdir/gcc/install ]; then
-  echo "This demo needs C++17 features that are available from GCC version 8 and above.
-  your GCC version seems to be too old. If possible, install a newer version or enable a toolset.
-  otherwise, the script will now attempt to build GCC 10 from source (which will consume lots of time and disk space.
-  Press enter to continue or Ctrl-C to abort..."
-  read
-  mkdir -p $wdir/gcc && cd $wdir/gcc && \
-  wget https://ftp.gnu.org/gnu/gcc/gcc-10.3.0/gcc-10.3.0.tar.gz && \
-  tar -xzf gcc-10.3.0.tar.gz && \
-  cd $wdir/gcc/gcc-10.3.0 && ./contrib/download_prerequisites && \
-  mkdir -p $wdir/gcc/build && cd $wdir/gcc/build && \
-  $wdir/gcc/gcc-10.3.0/configure --prefix=$wdir/gcc/install --disable-multilib && \
-  make -j${NCORES} && make install
-  if [ $? != 0 ]; then
-    echo "Something went wrong during GCC installation, exiting"
-  exit -1
+GCCVER=gcc-10.3.0
+if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8 ]; then 
+  if [ -d $wdir/gcc/install ]; then
+    echo "GCC seems to be installed already, skipping..."
+  else
+    echo "This demo needs C++17 features that are available from GCC version 8 and above.
+your GCC version seems to be too old. If possible, install a newer version or enable a toolset.
+otherwise, the script will now attempt to build GCC 10 from source (which will consume lots of time and disk space.
+Press enter to continue or Ctrl-C to abort..."
+    read
+    mkdir -p $wdir/gcc && cd $wdir/gcc && \
+    wget https://ftp.gnu.org/gnu/gcc/${GCCVER}/${GCCVER}.tar.gz && \
+    tar -xzf ${GCCVER}.tar.gz && \
+    cd $wdir/gcc/${GCCVER} && ./contrib/download_prerequisites && \
+    mkdir -p $wdir/gcc/build && cd $wdir/gcc/build && \
+    $wdir/gcc/${GCCVER}/configure --prefix=$wdir/gcc/install --disable-multilib && \
+    make -j${NCORES} && make install
+    if [ $? != 0 ]; then
+      echo "Something went wrong during GCC installation, exiting"
+    exit -1
+    fi
   fi
-fi
 export PATH=$wdir/gcc/install/bin:$PATH
 export LD_LIBRARY_PATH=$wdir/gcc/install/lib64:$wdir/gcc/install/lib:$LD_LIBRARY_PATH
+fi
 
 # Create an environment with recent GCC, CMake, python
 if [ ! -d $wdir/$cenv ]; then
