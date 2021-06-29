@@ -1,4 +1,13 @@
 
+# Set DEVICE to xilinx_u250 or xilinx_u200, make sure this matches your .xclbin file
+DEVICE=xilinx_u250
+
+# simplewiki is a small test dataset, enwiki is the full english wikipedia
+DATASET=simplewiki #enwiki
+
+# Change this if you want to use a different parallelization parameter when running Make
+NCORES=8
+
 # Find out where the script is located, assume we can create a working dir there
 scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
@@ -21,6 +30,27 @@ popd
 
 echo "Script located at $scriptdir, assuming it is still located in the root of the wiki-search-alveo repo. We will install various software dependencies at $wdir. This will consume a fair amount of diskspace. Press enter to continue or Ctrl-C to abort..."
 read
+
+if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8) ] && [ -d $wdir/gcc/install ]; then
+  echo "This demo needs C++17 features that are available from GCC version 8 and above.
+  your GCC version seems to be too old. If possible, install a newer version or enable a toolset.
+  otherwise, the script will now attempt to build GCC 10 from source (which will consume lots of time and disk space.
+  Press enter to continue or Ctrl-C to abort..."
+  read
+  mkdir -p $wdir/gcc && cd $wdir/gcc && \
+  wget https://ftp.gnu.org/gnu/gcc/gcc-10.3.0/gcc-10.3.0.tar.gz && \
+  tar -xzf gcc-10.3.0.tar.gz && \
+  cd $wdir/gcc/gcc-10.3.0 && ./contrib/download_prerequisites && \
+  mkdir -p $wdir/gcc/build && cd $wdir/gcc/build && \
+  $wdir/gcc/gcc-10.3.0/configure --prefix=$wdir/gcc/install --disable-multilib && \
+  make -j${NCORES} && make install
+  if [ $? != 0 ]; then
+    echo "Something went wrong during GCC installation, exiting"
+  exit -1
+  fi
+fi
+export PATH=$wdir/gcc/install/bin:$PATH
+export LD_LIBRARY_PATH=$wdir/gcc/install/lib64:$wdir/gcc/install/lib:$LD_LIBRARY_PATH
 
 # Create an environment with recent GCC, CMake, python
 if [ ! -d $wdir/$cenv ]; then
@@ -47,7 +77,7 @@ cd arrow && \
 git checkout apache-arrow-3.0.0 && \
 cd $wdir/arrow && mkdir build && cd build && \
 CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" LDFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0"  cmake -DCMAKE_INSTALL_PREFIX:PATH=$wdir/arrow/install ../arrow/cpp && \
-make -j8 && \
+make -j${NCORES} && \
 mkdir -p $wdir/arrow/install && \
 make install
 fi
@@ -154,7 +184,7 @@ git submodule update --init
 popd
 mkdir -p $wdir/snappy/build && cd $wdir/snappy/build
 cmake -DCMAKE_INSTALL_PREFIX:PATH=$wdir/snappy/install \
--DCMAKE_BUILD_TYPE=release -DBUILD_SHARED_LIBS=On ../snappy
+-DCMAKE_BUILD_TYPE=release -DBUILD_SHARED_LIBS=On -DSNAPPY_BUILD_TESTS=Off ../snappy
 make
 make install
 fi
@@ -183,9 +213,9 @@ else
 echo "Building the wiki-search host code"
 bash -c "source /opt/xilinx/xrt/setup.sh && \
 cd $repodir/alveo/vitis-2019.2 && \
-XILINX_VITIS=yolo \ 
 PKG_CONFIG_PATH=$wdir/arrow/build/src/arrow \
-make host DEVICE=xilinx_u250" 
+LD_LIBRARY_PATH=$snappy_libdir:$LD_LIBRARY_PATH \
+make host DEVICE=$DEVICE" 
 #Xilinx build files want this to be defined, but it is not used
 if [ $? != 0 ]; then
   echo "Something went wrong during wiki-search host code building, exiting"
@@ -208,34 +238,35 @@ fi
 # build the server
 echo "Building the server code"
 cd $repodir/server && \
-LD_LIBRARY_PATH=$repodir/alveo:$arror_libdir:$snappy_libdir:$LD_LIBRARY_PATH \
+LD_LIBRARY_PATH=$repodir/alveo:$arrow_libdir:$snappy_libdir:$LD_LIBRARY_PATH \
 cargo build --release
 if [ $? != 0 ]; then
   echo "Something went wrong during server code building, exiting"
   exit -1
+# If your machine cannot find some clang AST library, try adding LD_LIBRARY_PATH=/usr/lib64/clang-private
 fi
 
 
 # Create an example dataset
-if [ -f $repodir/data/simplewiki-rechunked-0.rb ]; then
+if [ -f $repodir/data/${DATASET}-rechunked-0.rb ]; then
 echo "An existing example dataset has been found. Skipping creation..."
 else
 echo "Creating an example dataset"
 cd $repodir/data
-if [ ! -f simplewiki-latest-pages-articles-multistream.xml.bz2 ]; then
-  wget https://dumps.wikimedia.org/simplewiki/latest/simplewiki-latest-pages-articles-multistream.xml.bz2
+if [ ! -f ${DATASET}-latest-pages-articles-multistream.xml.bz2 ]; then
+  wget https://dumps.wikimedia.org/${DATASET}/latest/${DATASET}-latest-pages-articles-multistream.xml.bz2
 fi
 spark-submit \
 --conf "spark.driver.extraJavaOptions=-Djava.net.useSystemProxies=true" \
 --packages com.databricks:spark-xml_2.11:0.6.0 \
 target/scala-2.11/wikipedia-to-arrow-with-snappy_2.11-1.0.jar \
-simplewiki-latest-pages-articles-multistream.xml.bz2 simplewiki
+${DATASET}-latest-pages-articles-multistream.xml.bz2 ${DATASET}
 if [ $? != 0 ]; then
   echo "Something went wrong during dataset creation, exiting"
   exit -1
 fi
 cd $repodir/data && \
-LD_LIBRARY_PATH=$wdir/arrow/install/lib ../optimize/optimize simplewiki simplewiki-rechunked
+LD_LIBRARY_PATH=$arrow_libdir:LD_LIBRARY_PATH ../optimize/optimize ${DATASET} ${DATASET}-rechunked
 if [ $? != 0 ]; then
   echo "Something went wrong during dataset optimization, exiting"
   exit -1
