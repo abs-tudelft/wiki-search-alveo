@@ -31,7 +31,7 @@ popd
 echo "Script located at $scriptdir, assuming it is still located in the root of the wiki-search-alveo repo. We will install various software dependencies at $wdir. This will consume a fair amount of diskspace. Press enter to continue or Ctrl-C to abort..."
 read
 
-if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8) ] && [ -d $wdir/gcc/install ]; then
+if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8 ] && [ ! -d $wdir/gcc/install ]; then
   echo "This demo needs C++17 features that are available from GCC version 8 and above.
   your GCC version seems to be too old. If possible, install a newer version or enable a toolset.
   otherwise, the script will now attempt to build GCC 10 from source (which will consume lots of time and disk space.
