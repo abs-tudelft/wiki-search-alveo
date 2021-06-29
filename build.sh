@@ -50,7 +50,8 @@ Press enter to continue or Ctrl-C to abort..."
     exit -1
     fi
   fi
-  SET_GCC_PATH="true" # Add the toolchain to the path after we build CMake, or it will cause problems
+  export PATH=$wdir/gcc/install/bin:$PATH
+  export LD_LIBRARY_PATH=$wdir/gcc/install/lib64:$wdir/gcc/install/lib:$LD_LIBRARY_PATH
 fi
 
 # Install CMake
@@ -70,10 +71,6 @@ if [ $? != 0 ]; then
   exit -1
 fi
 export PATH=$wdir/cmake/install/bin:$PATH
-if [ SET_GCC_PATH = "true" ]; then
-  export PATH=$wdir/gcc/install/bin:$PATH
-  export LD_LIBRARY_PATH=$wdir/gcc/install/lib64:$wdir/gcc/install/lib:$LD_LIBRARY_PATH
-fi
 
 # Install Apache Arrow
 if [ -d $wdir/arrow/install ]; then
