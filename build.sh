@@ -184,7 +184,7 @@ else
 mkdir -p $wdir/snappy && cd $wdir/snappy
 git clone https://github.com/google/snappy
 pushd snappy
-git checkout 1.1.7 # Shared library building doesn't work for newer versions
+git checkout 1.1.8 # Shared library building doesn't work for latest (1.1.9) version
 git submodule update --init
 popd
 mkdir -p $wdir/snappy/build && cd $wdir/snappy/build
