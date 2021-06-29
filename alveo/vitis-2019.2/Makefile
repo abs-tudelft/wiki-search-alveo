@@ -172,7 +172,7 @@ endif
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
-	$(CXX) $(CXXFLAGS) ${DDR_BANK_ASSIGNMENT) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DDR_BANK_ASSIGNMENT) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
 	$(CXX) $(CXXFLAGS) $(DDR_BANK_ASSIGNMENT) src/host.cpp -L . -lwordmatch -Wl,-rpath,. -o '$@' $(LDFLAGS)
 	rm -f ../libwordmatch.so
 	ln -sf vitis-2019.2/libwordmatch.so ../libwordmatch.so
