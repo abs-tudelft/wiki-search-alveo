@@ -17,8 +17,8 @@ repodir=$scriptdir
 wdir=$scriptdir/work
 mkdir -p $wdir
 
-# Name of the Conda environment
-cenv=wiki-search-build-env
+echo "Script located at $scriptdir, assuming it is still located in the root of the wiki-search-alveo repo. We will install various software dependencies at $wdir. This will consume a fair amount of diskspace. Press enter to continue or Ctrl-C to abort..."
+read
 
 # Clone submodules
 git submodule init
@@ -28,10 +28,7 @@ git submodule init
 git submodule update
 popd
 
-echo "Script located at $scriptdir, assuming it is still located in the root of the wiki-search-alveo repo. We will install various software dependencies at $wdir. This will consume a fair amount of diskspace. Press enter to continue or Ctrl-C to abort..."
-read
-
-GCCVER=gcc-10.3.0
+# Install CMake
 if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8 ]; then 
   if [ -d $wdir/gcc/install ]; then
     echo "GCC seems to be installed already, skipping..."
@@ -53,23 +50,30 @@ Press enter to continue or Ctrl-C to abort..."
     exit -1
     fi
   fi
-export PATH=$wdir/gcc/install/bin:$PATH
-export LD_LIBRARY_PATH=$wdir/gcc/install/lib64:$wdir/gcc/install/lib:$LD_LIBRARY_PATH
+  SET_GCC_PATH="true" # Add the toolchain to the path after we build CMake, or it will cause problems
 fi
 
-# Create an environment with recent GCC, CMake, python
-if [ ! -d $wdir/$cenv ]; then
-  echo "Creating Conda environment..."
-  conda env create -f $scriptdir/conda_env.yml --prefix $wdir/$cenv
-  if [ $? != 0 ]; then
-    echo "An error occurred during Conda environment creation."
-    exit -1
-  fi
+# Install CMake
+if [ -d $wdir/cmake/install ]; then
+  echo "CMake seems to be installed already, skipping..."
+else
+echo "Installing CMake..."
+mkdir -p $wdir/cmake && cd $wdir/cmake && \
+git clone https://github.com/KitWare/CMake && \
+cd CMake && \
+git checkout v3.20.5 && \
+./bootstrap --prefix=$wdir/cmake/install && \
+make -j${NCORES} && make install
 fi
-
-echo "Activating Conda environment"
-source $wdir/$cenv/etc/profile.d/conda.sh
-conda activate $wdir/$cenv
+if [ $? != 0 ]; then
+  echo "Something went wrong during CMake installation, exiting"
+  exit -1
+fi
+export PATH=$wdir/cmake/install/bin:$PATH
+if [ SET_GCC_PATH = "true" ]; then
+  export PATH=$wdir/gcc/install/bin:$PATH
+  export LD_LIBRARY_PATH=$wdir/gcc/install/lib64:$wdir/gcc/install/lib:$LD_LIBRARY_PATH
+fi
 
 # Install Apache Arrow
 if [ -d $wdir/arrow/install ]; then
@@ -82,9 +86,7 @@ cd arrow && \
 git checkout apache-arrow-3.0.0 && \
 cd $wdir/arrow && mkdir build && cd build && \
 CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" LDFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0"  cmake -DCMAKE_INSTALL_PREFIX:PATH=$wdir/arrow/install ../arrow/cpp && \
-make -j${NCORES} && \
-mkdir -p $wdir/arrow/install && \
-make install
+make -j${NCORES} && make install
 fi
 if [ $? != 0 ]; then
   echo "Something went wrong during Apache Arrow 2.0 installation, exiting"
