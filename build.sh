@@ -28,7 +28,8 @@ git submodule init
 git submodule update
 popd
 
-# Install CMake
+# Install GCC
+GCCNAME=gcc-10.3.0
 if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8 ]; then 
   if [ -d $wdir/gcc/install ]; then
     echo "GCC seems to be installed already, skipping..."
@@ -39,11 +40,11 @@ otherwise, the script will now attempt to build GCC 10 from source (which will c
 Press enter to continue or Ctrl-C to abort..."
     read
     mkdir -p $wdir/gcc && cd $wdir/gcc && \
-    wget https://ftp.gnu.org/gnu/gcc/${GCCVER}/${GCCVER}.tar.gz && \
-    tar -xzf ${GCCVER}.tar.gz && \
-    cd $wdir/gcc/${GCCVER} && ./contrib/download_prerequisites && \
+    wget https://ftp.gnu.org/gnu/gcc/${GCCNAME}/${GCCNAME}.tar.gz && \
+    tar -xzf ${GCCNAME}.tar.gz && \
+    cd $wdir/gcc/${GCCNAME} && ./contrib/download_prerequisites && \
     mkdir -p $wdir/gcc/build && cd $wdir/gcc/build && \
-    $wdir/gcc/${GCCVER}/configure --prefix=$wdir/gcc/install --disable-multilib && \
+    $wdir/gcc/${GCCNAME}/configure --prefix=$wdir/gcc/install --disable-multilib && \
     make -j${NCORES} && make install
     if [ $? != 0 ]; then
       echo "Something went wrong during GCC installation, exiting"
