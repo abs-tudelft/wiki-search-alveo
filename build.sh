@@ -66,6 +66,7 @@ Press enter to continue or Ctrl-C to abort..."
 fi
 
 # Install CMake
+CMAKENAME=cmake-3.20.5-linux-x86_64
 if cmake --version && [ $(cmake --version | head -n 1 | cut -d . -f 2) -ge 10 ]; then
   echo "Found recent enough CMake version in PATH, skipping..."
 elif [ -d $wdir/cmake/install ]; then
@@ -73,11 +74,14 @@ elif [ -d $wdir/cmake/install ]; then
 else
 echo "Installing CMake..."
 mkdir -p $wdir/cmake && cd $wdir/cmake && \
-git clone https://github.com/KitWare/CMake && \
-cd CMake && \
-git checkout v3.20.5 && \
-./bootstrap --prefix=$wdir/cmake/install && \
-make -j${NCORES} && make install
+#git clone https://github.com/KitWare/CMake && \
+#cd CMake && \
+#git checkout v3.20.5 && \
+#./bootstrap --prefix=$wdir/cmake/install && \
+#make -j${NCORES} && make install
+wget https://github.com/Kitware/CMake/releases/download/v3.20.5/CMAKENAME.tar.gz
+tar -xzf CMAKENAME.tar.gz
+mv CMAKENAME install
 fi
 if [ $? != 0 ]; then
   echo "Something went wrong during CMake installation, exiting"
