@@ -20,6 +20,14 @@ mkdir -p $wdir
 echo "Script located at $scriptdir, assuming it is still located in the root of the wiki-search-alveo repo. We will install various software dependencies at $wdir. This will consume a fair amount of diskspace. Press enter to continue or Ctrl-C to abort..."
 read
 
+# First, check if we happen to be running on the XACC cluster at ETHZ, because we have already set up an environment there.
+# Activating it instead of building will save lots of time
+env_file="/mnt/scratch/tud-abs/abs-env.sh"
+if [ -f $env_file ]; then
+  echo "Found TUD ABS environment, activating..."
+  source $env_file
+fi
+
 # Clone submodules
 git submodule init
 git submodule update
@@ -30,7 +38,9 @@ popd
 
 # Install GCC
 GCCNAME=gcc-10.3.0
-if [ $(g++ -dumpversion | cut -d '.' -f 1) -lt 8 ]; then 
+if [ $(g++ -dumpversion | cut -d '.' -f 1) -ge 8 ]; then 
+  echo "Found recent enough GCC in PATH, skipping..."
+else
   if [ -d $wdir/gcc/install ]; then
     echo "GCC seems to be installed already, skipping..."
   else
@@ -56,7 +66,9 @@ Press enter to continue or Ctrl-C to abort..."
 fi
 
 # Install CMake
-if [ -d $wdir/cmake/install ]; then
+if cmake --version && [ $(cmake --version | head -n 1 | cut -d . -f 2) -ge 10 ]; then
+  echo "Found recent enough CMake version in PATH, skipping..."
+elif [ -d $wdir/cmake/install ]; then
   echo "CMake seems to be installed already, skipping..."
 else
 echo "Installing CMake..."
@@ -74,7 +86,9 @@ fi
 export PATH=$wdir/cmake/install/bin:$PATH
 
 # Install Apache Arrow
-if [ -d $wdir/arrow/install ]; then
+if pkg-config arrow && [ $(pkg-config --modversion arrow | cut -d . -f 1) -ge 3 ]; then
+  echo "Found recent enough Apache Arrow package, skipping..."	
+elif [ -d $wdir/arrow/install ]; then
   echo "Apache Arrow seems to be installed already, skipping..."
 else
 echo "Installing Apache Arrow..."
@@ -93,6 +107,7 @@ fi
 arrow_libdir=$wdir/arrow/install/$(ls $wdir/arrow/install | grep lib) #some systems have a lib dir, other a lib64...
 
 # Install node.js and npm
+
 if [ -d $wdir/nodejs/node-v14.16.1-linux-x64/bin ]; then
   echo "node.js seems to be installed already, skipping..."
 else
