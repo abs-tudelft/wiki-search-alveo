@@ -441,7 +441,7 @@ fn main() -> Result<(), ()> {
     // Start server
     let port = 3030;
     println!("Starting server on port {}", port);
-    warp::serve(api).run(([127, 0, 0, 1], port));
+    warp::serve(api).run(([0, 0, 0, 0], port));
 
     println!("Cleaning up");
     unsafe { word_match_release() };

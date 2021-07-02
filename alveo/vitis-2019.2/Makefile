@@ -29,7 +29,7 @@ TARGET := hw
 HOST_ARCH := x86
 SYSROOT :=
 XCLBIN := ./xclbin
-DEVICE = xilinx_u200_xdma_201920_1
+DEVICE ?= xilinx_u200_xdma_201920_1
 
 include ./utils.mk
 
@@ -53,9 +53,15 @@ xcl2_HDRS:=libs/xcl2/xcl2.hpp
 
 xcl2_CXXFLAGS:=-Ilibs/xcl2 -fopenmp
 
+#Add flags in case we're running from the build script (which builds snappy from source)
+ifdef SNAPPY_INSTALLDIR
+SNAPPY_INCLUDE_FLAG=-I"$(SNAPPY_INSTALLDIR)"/include
+SNAPPY_LDFLAG=-L"$(SNAPPY_INSTALLDIR)"/lib
+endif
+
 #Include Libraries
-CXXFLAGS += $(xcl2_CXXFLAGS)
-LDFLAGS += $(xcl2_LDFLAGS)
+CXXFLAGS += $(xcl2_CXXFLAGS) $(SNAPPY_INCLUDE_FLAG)
+LDFLAGS += $(xcl2_LDFLAGS) $(SNAPPY_LDFLAG)
 HOST_SRCS += $(xcl2_SRCS)
 include config.mk
 
@@ -110,6 +116,7 @@ build: $(BINARY_CONTAINERS)
 # Building kernel
 $(XCLBIN)/word_match.$(TARGET).$(XSA).xclbin: $(BINARY_CONTAINER_vadd_OBJS)
 	mkdir -p $(XCLBIN)
+ifneq ($(findstring xilinx_u200, $(DEVICE)), )
 	$(VPP) $(CLFLAGS) -l $(LDCLFLAGS) -o $(XCLBIN)/word_match.$(TARGET).$(XSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(XSA).xo \
 		--nk krnl_word_match_rtl:15 \
 		--sp krnl_word_match_rtl_1.m_axi:DDR[0] --slr krnl_word_match_rtl_1:SLR0 \
@@ -128,15 +135,49 @@ $(XCLBIN)/word_match.$(TARGET).$(XSA).xclbin: $(BINARY_CONTAINER_vadd_OBJS)
 		--sp krnl_word_match_rtl_14.m_axi:DDR[3] --slr krnl_word_match_rtl_14:SLR2 \
 		--sp krnl_word_match_rtl_15.m_axi:DDR[3] --slr krnl_word_match_rtl_15:SLR2 \
 		--kernel_frequency '0:300|1:200'
+else
+ifneq ($(findstring xilinx_u250, $(DEVICE)), )
+	$(VPP) $(CLFLAGS) -l $(LDCLFLAGS) -o $(XCLBIN)/word_match.$(TARGET).$(XSA).xclbin $(XCLBIN)/word_match.$(TARGET).$(XSA).xo \
+		--nk krnl_word_match_rtl:15 \
+		--sp krnl_word_match_rtl_1.m_axi:DDR[0] --slr krnl_word_match_rtl_1:SLR0 \
+		--sp krnl_word_match_rtl_2.m_axi:DDR[0] --slr krnl_word_match_rtl_2:SLR0 \
+		--sp krnl_word_match_rtl_3.m_axi:DDR[0] --slr krnl_word_match_rtl_3:SLR0 \
+		--sp krnl_word_match_rtl_4.m_axi:DDR[0] --slr krnl_word_match_rtl_4:SLR0 \
+		--sp krnl_word_match_rtl_5.m_axi:DDR[0] --slr krnl_word_match_rtl_5:SLR0 \
+		--sp krnl_word_match_rtl_6.m_axi:DDR[1] --slr krnl_word_match_rtl_6:SLR1 \
+		--sp krnl_word_match_rtl_7.m_axi:DDR[1] --slr krnl_word_match_rtl_7:SLR1 \
+		--sp krnl_word_match_rtl_8.m_axi:DDR[1] --slr krnl_word_match_rtl_8:SLR1 \
+		--sp krnl_word_match_rtl_9.m_axi:DDR[1] --slr krnl_word_match_rtl_9:SLR1 \
+		--sp krnl_word_match_rtl_10.m_axi:DDR[1] --slr krnl_word_match_rtl_10:SLR1\
+		--sp krnl_word_match_rtl_11.m_axi:DDR[2] --slr krnl_word_match_rtl_11:SLR2 \
+		--sp krnl_word_match_rtl_12.m_axi:DDR[2] --slr krnl_word_match_rtl_12:SLR2 \
+		--sp krnl_word_match_rtl_13.m_axi:DDR[2] --slr krnl_word_match_rtl_13:SLR2 \
+		--sp krnl_word_match_rtl_14.m_axi:DDR[2] --slr krnl_word_match_rtl_14:SLR2 \
+		--sp krnl_word_match_rtl_15.m_axi:DDR[2] --slr krnl_word_match_rtl_15:SLR2 \
+		--kernel_frequency '0:300|1:200'
+else
+	echo "Only u200 and u250 devices are supported at this time."
+endif
+endif
 # 	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) -o'$@' $(+)
+
+# Set the appropriate bank index in the host code
+ifneq ($(findstring xilinx_u200, $(DEVICE)), )
+DDR_BANK_ASSIGNMENT = -DBANK3_INDEX=3
+else
+ifneq ($(findstring xilinx_u250, $(DEVICE)), )
+DDR_BANK_ASSIGNMENT = -DBANK3_INDEX=2
+endif
+endif
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
-	$(CXX) $(CXXFLAGS) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
-	$(CXX) $(CXXFLAGS) src/host.cpp -L . -lwordmatch -Wl,-rpath,. -o '$@' $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DDR_BANK_ASSIGNMENT) $(HOST_SRCS) -fPIC -shared -o libwordmatch.so $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DDR_BANK_ASSIGNMENT) src/host.cpp -L . -lwordmatch -Wl,-rpath,. -o '$@' $(LDFLAGS)
 	rm -f ../libwordmatch.so
 	ln -sf vitis-2019.2/libwordmatch.so ../libwordmatch.so
 	ln -sf vitis-2019.2/src/ffi.h ../ffi.h
+	$(info "Building host code for device $(DEVICE), make sure this is correct (U200/U250) because it determines the DDR bank assignment!")
 
 emconfig:$(EMCONFIG_DIR)/emconfig.json
 $(EMCONFIG_DIR)/emconfig.json:
@@ -163,7 +204,7 @@ endif
 
 # Cleaning stuff
 clean:
-	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*sw_emu*,*hw_emu*}
+	-$(RMDIR) $(EXECUTABLE) libwordmatch.so ../libwordmatch.so $(XCLBIN)/{*sw_emu*,*hw_emu*}
 	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv
 	-$(RMDIR) src/*.ll *v++* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb
 
