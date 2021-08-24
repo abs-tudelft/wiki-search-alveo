@@ -16,11 +16,11 @@
     "sass": "^1.38.1",
     "sass-loader": "^11.1.0",
     "typescript": "^4.2.4",
-    "vue-template-compiler": "^2.6.12"
+    "vue-template-compiler": "^2.6.14"
   },
   "dependencies": {
     "@mdi/font": "^5.9.55",
-    "vue": "^2.6.12",
+    "vue": "^2.6.14",
     "vue-hot-reload-api": "^2.3.4",
     "vuetify": "^2.5.0"
   }
